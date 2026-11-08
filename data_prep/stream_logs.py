@@ -7,6 +7,7 @@ data/logs_window.parquet (a few hundred MB). Disk needed: the ~7 GB archive only
     python data_prep/stream_logs.py [path/to/user_logs.csv.7z]
 """
 import io
+import json
 import sys
 import time
 from datetime import date, timedelta
@@ -83,6 +84,8 @@ class FilterWriter(Py7zIO):
         if self.writer:
             self.writer.close()
         print(f"\n  done: {self.rows_in:,} rows read, {self.rows_out:,} kept -> {self.out_path}")
+        (DATA / "logs_stream_stats.json").write_text(json.dumps(
+            {"rows_scanned": self.rows_in, "rows_kept": self.rows_out, "date_range": [LO, HI]}))
 
     def read(self, size=None):
         return b""
