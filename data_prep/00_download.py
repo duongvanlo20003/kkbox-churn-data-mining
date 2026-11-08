@@ -1,8 +1,9 @@
 """Download and extract the KKBox competition files into data/.
 
 Needs the Kaggle CLI with a token (~/.kaggle/kaggle.json or ~/.kaggle/access_token) and the
-competition rules accepted on kaggle.com. ``user_logs.csv`` is ~7 GB compressed / ~28 GB
-extracted; set SKIP_BIG_LOGS=1 to skip it (listening features will then be missing).
+competition rules accepted on kaggle.com. ``user_logs.csv.7z`` (~7 GB, ~28 GB extracted) is
+never extracted: stream_logs.py filters it while decompressing into data/logs_window.parquet,
+so the disk only needs room for the archive. Set SKIP_BIG_LOGS=1 to skip it entirely.
 Extraction prefers the 7z executable when available (much faster than py7zr).
 """
 import os
@@ -33,6 +34,9 @@ def main():
     DATA.mkdir(exist_ok=True)
     files = [f for f in RAW_FILES if not (f == "user_logs" and os.environ.get("SKIP_BIG_LOGS"))]
     for name in files:
+        if name == "user_logs" and (DATA / "logs_window.parquet").exists():
+            print("ready: user_logs (logs_window.parquet)", file=sys.stderr)
+            continue
         if (DATA / f"{name}.csv").exists():
             print("ready:", name, file=sys.stderr)
             continue
@@ -40,6 +44,12 @@ def main():
         if not archive.exists():
             subprocess.run(["kaggle", "competitions", "download", COMP,
                             "-f", f"{name}.csv.7z", "-p", str(DATA)], check=True)
+        if name == "user_logs":          # filter while decompressing, never write the 28 GB csv
+            from stream_logs import stream
+            stream(archive)
+            archive.unlink()
+            print("ready:", name, file=sys.stderr)
+            continue
         extract(archive)
         archive.unlink()
         # some archives nest the csv in a subfolder (e.g. data/churn_comp_refresh/); flatten
