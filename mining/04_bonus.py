@@ -55,13 +55,13 @@ if logs.exists():
         GROUP BY 1, 2 ORDER BY 1, 2""").df()
     traj.to_csv(REPORT / "bonus_trajectory.csv", index=False)
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    for y, lab in [(0, "stay"), (1, "churn")]:
+    for y, lab in [(0, "ở lại"), (1, "churn")]:
         t = traj[traj.is_churn == y]
         axes[0].plot(t.week + 1, t.active_days_per_user, marker="o", label=lab)
         axes[1].plot(t.week + 1, t.hours_per_user, marker="o", label=lab)
-    axes[0].set_title("Active days per user per week"); axes[1].set_title("Listening hours per user per week")
+    axes[0].set_title("Số ngày nghe trung bình mỗi tuần"); axes[1].set_title("Số giờ nghe trung bình mỗi tuần")
     for a in axes:
-        a.set_xlabel(f"week before cutoff (last = 7 days ending {cut})"); a.legend()
+        a.set_xlabel(f"tuần trước cutoff (tuần cuối = 7 ngày tới {cut})"); a.legend()
     savefig(fig, "bonus_trajectory.png")
     first, last = traj.week.min(), traj.week.max()
     out["trajectory_change"] = {
@@ -135,19 +135,19 @@ try:
     emb = umap.UMAP(n_neighbors=30, min_dist=0.1, random_state=SEED).fit_transform(Xa[idx])
     fig, axes = plt.subplots(1, 2, figsize=(14, 6))
     axes[0].scatter(emb[:, 0], emb[:, 1], c=df.is_churn.values[idx], s=3, cmap="coolwarm", alpha=0.6)
-    axes[0].set_title("UMAP of behaviour features (red = churn)")
+    axes[0].set_title("UMAP của đặc trưng hành vi (đỏ = churn)")
     if cl.exists():
         c = df[["msno"]].merge(pd.read_parquet(cl), on="msno", how="left").cluster.values[idx]
         sc = axes[1].scatter(emb[:, 0], emb[:, 1], c=c, s=3, cmap="tab10", alpha=0.6)
-        axes[1].legend(*sc.legend_elements(), title="segment", fontsize=7)
-        axes[1].set_title("same embedding coloured by K-Means segment")
+        axes[1].legend(*sc.legend_elements(), title="phân khúc", fontsize=7)
+        axes[1].set_title("cùng phép chiếu, tô màu theo phân khúc K-Means")
     savefig(fig, "umap_churn.png")
 except ImportError:
     print("umap-learn not installed; skipping UMAP")
 fig, ax = plt.subplots(figsize=(6, 4))
 ax.bar(range(1, len(pca.explained_variance_ratio_) + 1), pca.explained_variance_ratio_)
 ax.plot(range(1, len(pca.explained_variance_ratio_) + 1), np.cumsum(pca.explained_variance_ratio_), "r-o")
-ax.set_xlabel("component"); ax.set_ylabel("explained variance"); ax.set_title("PCA scree plot")
+ax.set_xlabel("thành phần"); ax.set_ylabel("tỉ lệ phương sai giải thích"); ax.set_title("PCA: phương sai giải thích")
 savefig(fig, "bonus_pca_scree.png")
 
 save_metrics("bonus", out)

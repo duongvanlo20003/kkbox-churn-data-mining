@@ -31,6 +31,7 @@ from sklearn.model_selection import train_test_split
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import DATA, REPORT, SEED, bh_fdr, load, save_metrics, savefig
+from transforms import itemise
 
 MIN_SUPPORT = float(os.environ.get("MIN_SUPPORT", 0.01))   # of the antecedent X
 MIN_IMPROVE = 0.02
@@ -41,39 +42,6 @@ cl = DATA / "clusters_mar.parquet"
 if cl.exists():  # segment label from clustering as an extra item (NaN for users outside the sample)
     df = df.merge(pd.read_parquet(cl), on="msno", how="left")
 tr, ho = train_test_split(df, test_size=0.3, stratify=df.is_churn, random_state=SEED)
-
-
-def itemise(d, ref):
-    """Map users to items. Quantile cut-points are taken from ``ref`` (the train split)."""
-    act_q = ref.loc[ref.has_logs == 1, "active_days"].quantile([1 / 3, 2 / 3]).values
-    skip_q = ref.loc[ref.has_logs == 1, "skip_ratio"].quantile(2 / 3)
-    logs = d.has_logs == 1
-    it = pd.DataFrame(index=d.index)
-    it["renew"] = d.last_auto_renew.map({1: "auto_renew=on", 0: "auto_renew=off"}).fillna("no_tx")
-    it["cancel"] = np.where(d.last_is_cancel == 1, "last_tx=cancel",
-                   np.where(d.n_cancel > 0, "cancelled_before", "never_cancelled"))
-    it["plan"] = pd.cut(d.last_plan_days, [-1, 7, 30, 10_000],
-                        labels=["plan<=7d", "plan=30d", "plan>30d"]).astype(str).replace("nan", "plan=none")
-    it["price"] = np.select([d.last_paid == 0, d.last_paid < d.last_list_price],
-                            ["paid=free", "paid=discount"], "paid=full")
-    it["tenure"] = pd.cut(d.tenure_days, [-1, 365, 3 * 365, 6 * 365, 1e6],
-                          labels=["tenure<1y", "tenure1-3y", "tenure3-6y", "tenure>6y"]).astype(str)
-    it["via"] = "via=" + d.registered_via.astype("Int64").astype(str)
-    it["gender"] = "gender=" + d.gender.astype(str)
-    it["activity"] = np.where(~logs, "no_logs", pd.cut(d.active_days, [-1, act_q[0], act_q[1], 1e6],
-                              labels=["active=low", "active=mid", "active=high"]).astype(str))
-    it["idle"] = np.where(~logs, None, pd.cut(d.days_since_last_listen, [-1, 3, 14, 1e6],
-                          labels=["idle<=3d", "idle4-14d", "idle>14d"]).astype(str))
-    it["trend"] = np.where(~logs, None, pd.cut(d.listen_trend, [-99, -0.5, 0.5, 99],
-                           labels=["trend=falling", "trend=flat", "trend=rising"]).astype(str))
-    it["skip"] = np.where(logs & (d.skip_ratio > skip_q), "skip=high", None)
-    it["expire"] = pd.cut(d.days_to_expire, [-1e6, 0, 31, 1e6],
-                          labels=["expired_at_T", "expires<=31d", "expires>31d"]).astype(str).replace("nan", None)
-    if "cluster" in d:
-        it["segment"] = np.where(d.cluster.isna(), None, "segment=" + d.cluster.astype("Int64").astype(str))
-    it = it.astype(object).where(it.notna(), None)
-    return pd.concat([pd.get_dummies(it[c].dropna(), prefix="", prefix_sep="").reindex(d.index, fill_value=False)
-                      for c in it.columns], axis=1).astype(bool)
 
 
 Itr, Iho = itemise(tr, tr), itemise(ho, tr)
@@ -175,10 +143,10 @@ print("\n", sens.round(3).to_string(index=False))
 fig, ax = plt.subplots(figsize=(8, 5))
 sc = ax.scatter(rules.support, rules.confidence, c=rules.lift, cmap="viridis", s=8, alpha=0.6)
 ax.scatter(out["churn"].support, out["churn"].confidence, facecolors="none", edgecolors="red", s=40,
-           label="selected churn rules")
-ax.axhline(base, color="crimson", ls="--", lw=1, label=f"base churn {base:.1%}")
-ax.set_xscale("log"); ax.set_xlabel("support of antecedent (log)"); ax.set_ylabel("P(churn | X)")
-fig.colorbar(sc, label="lift"); ax.legend(); ax.set_title("Frequent itemsets: support vs churn confidence")
+           label="luật churn được chọn")
+ax.axhline(base, color="crimson", ls="--", lw=1, label=f"churn nền {base:.1%}")
+ax.set_xscale("log"); ax.set_xlabel("support của vế trái X (thang log)"); ax.set_ylabel("P(churn | X)")
+fig.colorbar(sc, label="lift"); ax.legend(); ax.set_title("Tập phổ biến: support và confidence churn")
 savefig(fig, "rules_scatter.png")
 
 c = out["churn"]

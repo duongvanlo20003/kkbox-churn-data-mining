@@ -42,8 +42,9 @@ def thousands(x):
     return f"{int(x):,}".replace(",", ".")
 
 
-eda, cl, ru, cf, sq, bo, va = (j(n) for n in ["eda", "clustering", "rules", "classification",
-                                               "sequential", "bonus", "validation"])
+eda, cl, ru, cf, sq, bo, va, st, bv = (j(n) for n in ["eda", "clustering", "rules", "classification",
+                                                       "sequential", "bonus", "validation", "stability",
+                                                       "business_value"])
 manifest = json.loads((DATA / "manifest.json").read_text()) if (DATA / "manifest.json").exists() else {}
 oot = pd.DataFrame(cf.get("out_of_time", []))
 best = cf.get("best_model", "LightGBM")
@@ -256,16 +257,54 @@ if rule:
 figure(d, F / "leakage_audit.png", "Hình 13. Leakage audit")
 para(d, "AUDIT_NARRATIVE")
 
-d.add_heading("6.2 So sánh các phương pháp", 2)
+d.add_heading("6.2 Độ ổn định theo thời gian (tháng 3 → tháng 2)", 2)
+para(d, "Mọi phân khúc, luật và mẫu tuần tự được tìm trên cohort tháng 3 được đo lại trên cohort tháng 2 với "
+        "đúng định nghĩa cũ (cùng scaler, tâm cụm, ngưỡng rời rạc hóa). Vì tỉ lệ churn nền khác nhau "
+        f"({pct(st.get('base_feb'))} so với {pct(st.get('base_mar'))}), đại lượng so sánh là lift.")
+ct = csv("cluster_temporal.csv")
+if len(ct):
+    t = ct[["cluster", "name", "share_mar", "share_feb", "churn_mar", "churn_feb", "lift_mar", "lift_feb"]].copy()
+    t.columns = ["Cụm", "Phân khúc", "Tỉ trọng T3", "Tỉ trọng T2", "Churn T3", "Churn T2", "Lift T3", "Lift T2"]
+    table(d, t, "Bảng 15. Phân khúc tháng 3 áp lên tháng 2",
+          fmt={c: "{:.1%}" for c in ["Tỉ trọng T3", "Tỉ trọng T2", "Churn T3", "Churn T2"]} | {"Lift T3": "{:.2f}", "Lift T2": "{:.2f}"})
+rtm = csv("rule_temporal.csv")
+if len(rtm):
+    t = rtm[["rule", "direction", "lift_mar_holdout", "lift_feb", "same_direction"]].head(14).copy()
+    t["same_direction"] = t.same_direction.map({True: "có", False: "không"})
+    t.columns = ["Luật", "Hướng", "Lift T3 (holdout)", "Lift T2", "Giữ hướng"]
+    table(d, t, "Bảng 16. Luật kết hợp tháng 3 đo lại trên tháng 2", fmt={"Lift T3 (holdout)": "{:.2f}", "Lift T2": "{:.2f}"})
+figure(d, F / "stability.png", "Hình 14. Độ ổn định của phân khúc và luật giữa hai tháng")
+para(d, "STABILITY_NARRATIVE")
+
+d.add_heading("6.3 Hiệu chuẩn xác suất và giá trị kinh doanh", 2)
+calt = csv("calibration.csv")
+if len(calt):
+    t = calt.copy()
+    t.columns = ["Phiên bản", "Dự báo TB", "Thực tế", "Brier", "Log-loss", "ECE"]
+    table(d, t, "Bảng 17. Hiệu chuẩn trên tháng 3", fmt={"Dự báo TB": "{:.2%}", "Thực tế": "{:.2%}", "Brier": "{:.4f}",
+                                                          "Log-loss": "{:.4f}", "ECE": "{:.4f}"})
+figure(d, F / "calibration.png", "Hình 15. Đường hiệu chuẩn (thang log)", width=4.8)
+pcv = csv("profit_curve.csv")
+if len(pcv):
+    best_rows = pcv.loc[pcv.groupby("success_rate").net_value_ntd.idxmax()]
+    t = best_rows[["success_rate", "share_contacted", "n_contacted", "churners_reached", "net_value_ntd", "random_targeting_ntd"]].copy()
+    t.columns = ["Tỉ lệ cứu được", "% liên hệ tối ưu", "Số người", "% người churn tiếp cận", "Giá trị ròng (NTD)", "Ngẫu nhiên cùng quy mô (NTD)"]
+    table(d, t, "Bảng 18. Điểm tối ưu của chiến dịch theo giả định tỉ lệ cứu được",
+          fmt={"Tỉ lệ cứu được": "{:.0%}", "% liên hệ tối ưu": "{:.0%}", "% người churn tiếp cận": "{:.1%}",
+               "Số người": "{:,.0f}", "Giá trị ròng (NTD)": "{:,.0f}", "Ngẫu nhiên cùng quy mô (NTD)": "{:,.0f}"})
+figure(d, F / "profit_curve.png", "Hình 16. Đường lợi nhuận của chiến dịch giữ chân (back-test trên tháng 3)")
+para(d, "VALUE_NARRATIVE")
+
+d.add_heading("6.4 So sánh các phương pháp", 2)
 comp = csv("algorithm_comparison.csv")
 if len(comp):
     t = comp.copy()
     t.columns = ["Kỹ thuật", "Loại", "Chất lượng", "Thời gian (s)", "Khả năng diễn giải", "Ứng dụng kinh doanh"]
-    table(d, t, "Bảng 14. So sánh kỹ thuật theo chất lượng, chi phí, khả năng diễn giải và tính hành động",
+    table(d, t, "Bảng 19. So sánh kỹ thuật theo chất lượng, chi phí, khả năng diễn giải và tính hành động",
           fmt={"Thời gian (s)": "{:.0f}"})
 sens = csv("rule_sensitivity.csv")
 if len(sens):
-    table(d, sens, "Bảng 15. Độ nhạy của luật kết hợp theo min_support", fmt={"jaccard_top10_vs_default": "{:.2f}"})
+    table(d, sens, "Bảng 20. Độ nhạy của luật kết hợp theo min_support", fmt={"jaccard_top10_vs_default": "{:.2f}"})
 para(d, "EVAL_NARRATIVE")
 
 # ---------------------------------------------------------------------------------------------
@@ -274,22 +313,22 @@ para(d, "BUSINESS_NARRATIVE")
 
 # ---------------------------------------------------------------------------------------------
 d.add_heading("8. Advanced Techniques (bonus)", 1)
-figure(d, F / "bonus_trajectory.png", "Hình 14. Quỹ đạo nghe theo tuần trong 8 tuần trước T")
-for name, cap in [("bonus_trend.csv", "Bảng 16. Churn theo xu hướng nghe"), ("bonus_idle.csv", "Bảng 17. Churn theo số ngày im lặng")]:
+figure(d, F / "bonus_trajectory.png", "Hình 17. Quỹ đạo nghe theo tuần trong 8 tuần trước T")
+for name, cap in [("bonus_trend.csv", "Bảng 21. Churn theo xu hướng nghe"), ("bonus_idle.csv", "Bảng 22. Churn theo số ngày im lặng")]:
     t = csv(name)
     if len(t):
         t = t.rename(columns={t.columns[0]: "Nhóm"})[["Nhóm", "n", "churn_rate", "ci_low", "ci_high", "lift"]]
         table(d, t, cap, fmt={"churn_rate": "{:.1%}", "ci_low": "{:.1%}", "ci_high": "{:.1%}", "lift": "{:.2f}", "n": "{:,.0f}"})
 an = csv("bonus_anomaly.csv")
 if len(an):
-    table(d, an, "Bảng 18. Isolation Forest: churn ở nhóm bất thường (2%) và bình thường",
+    table(d, an, "Bảng 23. Isolation Forest: churn ở nhóm bất thường (2%) và bình thường",
           fmt={"churn_rate": "{:.1%}", "ci_low": "{:.1%}", "ci_high": "{:.1%}", "lift": "{:.2f}"})
 sub = csv("bonus_subsets.csv")
 if len(sub):
-    table(d, sub, "Bảng 19. So sánh tập con: mô hình ngoài thời gian hoạt động thế nào trong từng nhóm",
+    table(d, sub, "Bảng 24. So sánh tập con: mô hình ngoài thời gian hoạt động thế nào trong từng nhóm",
           fmt={"share": "{:.1%}", "churn_rate": "{:.1%}", "mean_pred": "{:.1%}", "n": "{:,.0f}"})
-figure(d, F / "umap_churn.png", "Hình 15. UMAP của đặc trưng hành vi: theo churn và theo phân khúc")
-figure(d, F / "bonus_pca_scree.png", "Hình 16. PCA scree plot", width=4.5)
+figure(d, F / "umap_churn.png", "Hình 18. UMAP của đặc trưng hành vi: theo churn và theo phân khúc")
+figure(d, F / "bonus_pca_scree.png", "Hình 19. PCA scree plot", width=4.5)
 para(d, "BONUS_NARRATIVE")
 
 d.add_heading("9. Kết luận, hạn chế và hướng phát triển", 1)

@@ -78,9 +78,9 @@ for ax, col in zip(axes.flat, groups):
     ax.bar(t.level, t.churn_rate, yerr=[t.churn_rate - t.ci_low, t.ci_high - t.churn_rate],
            color="#4C72B0", capsize=3)
     ax.axhline(base, color="crimson", ls="--", lw=1)
-    ax.set_title(f"churn by {col} (V={chi.get(col, {}).get('cramers_v', float('nan')):.2f})")
+    ax.set_title(f"churn theo {col} (V={chi.get(col, {}).get('cramers_v', float('nan')):.2f})")
     ax.tick_params(axis="x", rotation=30, labelsize=8)
-fig.suptitle(f"Churn rate by group, mar cohort (dashed = overall {base:.1%}, bars = 95% CI)")
+fig.suptitle(f"Tỉ lệ churn theo nhóm, cohort tháng 3 (nét đứt = mức chung {base:.1%}, thanh lỗi = CI 95%)")
 savefig(fig, "eda_churn_by_group.png")
 
 # ---- distributions of key behaviours ------------------------------------------------------
@@ -90,7 +90,7 @@ for ax, c in zip(axes.flat, keys):
     for y, col in [(0, "#4C72B0"), (1, "#DD8452")]:
         v = df.loc[df.is_churn == y, c].dropna()
         ax.hist(v.clip(upper=v.quantile(0.99)), bins=40, density=True, alpha=0.55, color=col,
-                label="churn" if y else "stay")
+                label="churn" if y else "ở lại")
     ax.set_title(c)
 axes.flat[0].legend()
 savefig(fig, "eda_distributions.png")
@@ -102,7 +102,7 @@ im = ax.imshow(corr, cmap="RdBu_r", vmin=-1, vmax=1)
 ax.set_xticks(range(len(corr)), corr.columns, rotation=90, fontsize=7)
 ax.set_yticks(range(len(corr)), corr.columns, fontsize=7)
 fig.colorbar(im, shrink=0.7)
-ax.set_title("Spearman correlation (mar cohort)")
+ax.set_title("Tương quan Spearman (cohort tháng 3)")
 savefig(fig, "eda_correlation.png")
 high = (corr.where(np.triu(np.ones(corr.shape, bool), 1)).stack().abs().sort_values(ascending=False))
 
@@ -110,8 +110,8 @@ high = (corr.where(np.triu(np.ones(corr.shape, bool), 1)).stack().abs().sort_val
 fig, ax = plt.subplots(figsize=(7, 4))
 t = churn_table(d, "tenure_y")
 ax.errorbar(t.index, t.churn_rate, yerr=[t.churn_rate - t.ci_low, t.ci_high - t.churn_rate], marker="o")
-ax.set_xlabel("tenure (years, capped at 10)"); ax.set_ylabel("churn rate")
-ax.set_title("Churn rate by tenure")
+ax.set_xlabel("thâm niên (năm, chặn ở 10)"); ax.set_ylabel("tỉ lệ churn")
+ax.set_title("Tỉ lệ churn theo thâm niên")
 savefig(fig, "eda_churn_by_tenure.png")
 
 save_metrics("eda", {

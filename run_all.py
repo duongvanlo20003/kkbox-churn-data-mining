@@ -25,6 +25,8 @@ STEPS = [
     "mining/04_bonus.py",
     "mining/05_sequential.py",
     "mining/06_validation.py",
+    "mining/07_stability.py",
+    "mining/08_business_value.py",
     "report/build_report.py",
 ]
 

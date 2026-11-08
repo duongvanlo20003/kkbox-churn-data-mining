@@ -89,8 +89,8 @@ if leak_file.exists():
             color=["#55A868" if "clean" in s and "+" not in s else "#C44E52" for s in audit.feature_set[::-1]])
     for i, v in enumerate(audit.roc_auc[::-1]):
         ax.text(v, i, f" {v:.3f}", va="center")
-    ax.set_xlim(0.5, 1.02); ax.set_xlabel("ROC-AUC (same users, same split)")
-    ax.set_title("Leakage audit: green = information available at cutoff, red = uses label month")
+    ax.set_xlim(0.5, 1.02); ax.set_xlabel("ROC-AUC (cùng người dùng, cùng phép chia)")
+    ax.set_title("Audit rò rỉ: xanh = thông tin có tại cutoff, đỏ = dùng dữ liệu tháng nhãn")
     savefig(fig, "leakage_audit.png")
 else:
     print("leakage_mar.parquet missing: run data_prep/03_build_leakage_audit.py")

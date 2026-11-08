@@ -33,30 +33,14 @@ from sklearn.preprocessing import StandardScaler
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import DATA, REPORT, SEED, churn_table, load, save_metrics, savefig
+from transforms import FEATS, LOGT, prepare
 
 N = int(os.environ.get("CLUSTER_SAMPLE", 200_000))
 N_ALT = int(os.environ.get("CLUSTER_ALT_SAMPLE", 15_000))  # O(n^2) algorithms
 K_RANGE = range(2, 11)
-FEATS = ["n_tx", "n_cancel", "auto_renew_rate", "discount_rate", "last_plan_days", "last_paid",
-         "days_to_expire", "tenure_days", "active_days", "total_hours", "complete_ratio",
-         "skip_ratio", "avg_unique_songs", "listen_trend", "days_since_last_listen", "weekly_cv"]
-LOGT = ["n_tx", "n_cancel", "last_plan_days", "last_paid", "tenure_days", "active_days",
-        "total_hours", "avg_unique_songs", "days_since_last_listen"]
 
 t0 = time.time()
 df = load("mar", sample=N)
-
-
-def prepare(d):
-    """Feature matrix before scaling. Users without logs get explicit 'inactive' values."""
-    raw = d[FEATS].copy()
-    nolog = d.has_logs == 0
-    raw.loc[nolog, ["complete_ratio", "skip_ratio", "listen_trend"]] = 0
-    raw.loc[nolog, "days_since_last_listen"] = 60
-    raw.loc[nolog, "weekly_cv"] = 3.0          # maximal irregularity
-    raw["days_to_expire"] = raw.days_to_expire.clip(-60, 400)
-    raw[LOGT] = np.log1p(raw[LOGT].clip(lower=0))
-    return raw
 
 
 R = prepare(df)
@@ -114,7 +98,7 @@ fig, axes = plt.subplots(1, 4, figsize=(16, 3.6))
 for ax, m in zip(axes, ["inertia", "silhouette", "davies_bouldin", "calinski_harabasz"]):
     ax.plot(quality.k, quality[m], marker="o"); ax.axvline(K, color="crimson", ls="--")
     ax.axvline(K_MACRO, color="grey", ls=":")
-    ax.set_title(m + (" (lower better)" if m in ("inertia", "davies_bouldin") else " (higher better)"))
+    ax.set_title(m + (" (càng thấp càng tốt)" if m in ("inertia", "davies_bouldin") else " (càng cao càng tốt)"))
     ax.set_xlabel("k")
 savefig(fig, "cluster_selection.png")
 
@@ -204,9 +188,9 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 6))
 for c in range(K):
     m = km.labels_[alt_idx] == c
     axes[0].scatter(pts[m, 0], pts[m, 1], s=3, alpha=0.5, label=f"{c}: {names[c]}")
-axes[0].legend(markerscale=4, fontsize=7); axes[0].set_title(f"K-Means k={K} in PCA space")
+axes[0].legend(markerscale=4, fontsize=7); axes[0].set_title(f"K-Means k={K} trên không gian PCA")
 axes[1].scatter(pts[:, 0], pts[:, 1], c=y_alt, s=3, cmap="coolwarm", alpha=0.5)
-axes[1].set_title("same points coloured by churn (red)")
+axes[1].set_title("cùng các điểm, tô màu theo churn (đỏ)")
 savefig(fig, "clusters_pca.png")
 
 fig, ax = plt.subplots(figsize=(9, 4.5))
@@ -214,19 +198,21 @@ order = prof.sort_values("churn_rate").index
 ax.barh([f"{c}: {names[c]}" for c in order], prof.loc[order, "churn_rate"],
         xerr=[prof.loc[order, "churn_rate"] - prof.loc[order, "ci_low"],
               prof.loc[order, "ci_high"] - prof.loc[order, "churn_rate"]], color="#4C72B0")
-ax.axvline(base, color="crimson", ls="--", label=f"overall {base:.1%}")
+ax.axvline(base, color="crimson", ls="--", label=f"mức chung {base:.1%}")
 for i, c in enumerate(order):
     ax.text(prof.loc[c, "churn_rate"], i, f"  {prof.loc[c, 'churn_rate']:.1%} (n={prof.loc[c, 'n']:,})", va="center", fontsize=8)
-ax.set_xlabel("churn rate (95% CI)"); ax.legend(); ax.set_title("Churn rate per segment")
+ax.set_xlabel("tỉ lệ churn (CI 95%)"); ax.legend(); ax.set_title("Tỉ lệ churn theo phân khúc")
 savefig(fig, "cluster_churn.png")
 
 fig, ax = plt.subplots(figsize=(11, 0.6 * K + 2))
 im = ax.imshow(z.values, cmap="RdBu_r", vmin=-2, vmax=2, aspect="auto")
 ax.set_xticks(range(len(FEATS)), FEATS, rotation=60, ha="right", fontsize=8)
 ax.set_yticks(range(K), [f"{c}: {names[c]}" for c in z.index], fontsize=8)
-fig.colorbar(im); ax.set_title("Cluster centroids (z-score vs population)")
+fig.colorbar(im); ax.set_title("Tâm cụm (z-score so với toàn bộ người dùng)")
 savefig(fig, "cluster_heatmap.png")
 
+import joblib
+joblib.dump({"scaler": scaler, "km": km, "median": MED, "names": names}, DATA / "cluster_model.joblib")
 full = load("mar")  # assign every user of the cohort to its nearest centroid
 full_lab = km.predict(scaler.transform(prepare(full).fillna(MED)))
 km_macro = KMeans(K_MACRO, n_init=10, random_state=SEED).fit(X)

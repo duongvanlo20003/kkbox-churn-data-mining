@@ -9,6 +9,13 @@
   "base_rate_train": 0.08994285714285714,
   "base_rate_holdout": 0.08994444444444444,
   "min_support": 0.01,
+  "feb_base_rate": 0.06392333333333333,
+  "n_users_feb": 300000,
+  "n_available_feb": 992931,
+  "corr_lift_mar_feb": 0.9830359936430574,
+  "corr_lift_mar_feb_reference": "lift_train",
+  "n_log_lift_pairs_mar_feb": 30,
+  "share_same_direction_feb": 1.0,
   "max_pattern_length": 4,
   "n_tested": 4945,
   "n_selected": 77,
@@ -18,7 +25,7 @@
   "seed": 42,
   "test": "Pearson chi-square (1 df), BH FDR over mined family",
   "sensitivity_fdr": "Shared family at lowest requested/sensitivity support",
-  "runtime_s": 19.392,
+  "runtime_s": 23.281,
   "top5": [
     {
       "len": 3,
@@ -31,6 +38,9 @@
       "support_holdout": 0.010222222222222223,
       "conf_holdout": 0.6652173913043479,
       "lift_holdout": 7.395869699492441,
+      "support_feb": 0.00944,
+      "conf_feb": 0.3838276836158192,
+      "lift_feb": 6.004500447658432,
       "support_churn_train": 0.08243329097839898,
       "support_stay_train": 0.0034063795052116036
     },
@@ -45,6 +55,9 @@
       "support_holdout": 0.018433333333333333,
       "conf_holdout": 0.6081977094635322,
       "lift_holdout": 6.761926355987388,
+      "support_feb": 0.0174,
+      "conf_feb": 0.36149425287356324,
+      "lift_feb": 5.655122066124471,
       "support_churn_train": 0.13262388818297333,
       "support_stay_train": 0.007649964418770145
     },
@@ -59,6 +72,9 @@
       "support_holdout": 0.012822222222222223,
       "conf_holdout": 0.5337954939341422,
       "lift_holdout": 5.934724453869401,
+      "support_feb": 0.012283333333333334,
+      "conf_feb": 0.3473541383989145,
+      "lift_feb": 5.433917793172777,
       "support_churn_train": 0.08576874205844981,
       "support_stay_train": 0.006059274142910963
     },
@@ -73,6 +89,9 @@
       "support_holdout": 0.009622222222222223,
       "conf_holdout": 0.5484988452655889,
       "lift_holdout": 6.098195932538975,
+      "support_feb": 0.009413333333333333,
+      "conf_feb": 0.3378186968838527,
+      "lift_feb": 5.284747826310466,
       "support_churn_train": 0.06379711986446421,
       "support_stay_train": 0.004724978023358031
     },
@@ -87,6 +106,9 @@
       "support_holdout": 0.029822222222222222,
       "conf_holdout": 0.5502980625931445,
       "lift_holdout": 6.118199584111552,
+      "support_feb": 0.028403333333333333,
+      "conf_feb": 0.3378711418847553,
+      "lift_feb": 5.285568262263472,
       "support_churn_train": 0.1859381617958492,
       "support_stay_train": 0.014891791200971158
     }

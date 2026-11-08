@@ -22,6 +22,10 @@ patterns without letting churn crowd them out. Both directions keep the same
 minimum support, q < 0.01 and lift > 1.2 / < 0.8 filters; unused slots are not
 transferred between directions. Holdout is descriptive replication, not a test
 used for filtering; zero matches yield null confidence/lift.
+Reported patterns are also evaluated on an independently sampled February cohort,
+using its own base rate. Temporal correlation compares training and February
+log-lifts on pairs with positive lift; undefined correlations are null. Direction
+agreement uses all reported patterns (missing February matches do not agree).
 """
 
 import json
@@ -42,7 +46,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[1]
 MAX_LENGTH = 4
 COLUMNS = ["pattern", "len", "support_train", "conf_train", "lift_train", "q_value",
-           "support_holdout", "conf_holdout", "lift_holdout", "direction"]
+           "support_holdout", "conf_holdout", "lift_holdout",
+           "support_feb", "conf_feb", "lift_feb", "direction"]
 
 
 def stratified_indices(labels, size, rng):
@@ -69,9 +74,10 @@ def split_indices(labels, rng):
     return np.asarray(train), np.asarray(holdout)
 
 
-def encode(sequences):
+def encode(sequences, vocabulary=None):
     """Build one uint16 occurrence mask per user and token (at most 12 bits)."""
-    vocabulary = sorted({str(token) for seq in sequences for event in seq for token in event})
+    if vocabulary is None:
+        vocabulary = sorted({str(token) for seq in sequences for event in seq for token in event})
     mapping = {token: i for i, token in enumerate(vocabulary)}
     masks = np.zeros((len(vocabulary), len(sequences)), dtype=np.uint16)
     for user, seq in enumerate(sequences):
@@ -81,7 +87,8 @@ def encode(sequences):
             if isinstance(event, str):
                 raise ValueError("Expected nested itemsets, not a flat token sequence")
             for token in event:
-                masks[mapping[str(token)], user] |= np.uint16(1 << pos)
+                if str(token) in mapping:
+                    masks[mapping[str(token)], user] |= np.uint16(1 << pos)
     return vocabulary, masks
 
 
@@ -214,6 +221,25 @@ def pattern_name(pattern, vocabulary):
     return " -> ".join("{" + ", ".join(vocabulary[t] for t in event) + "}" for event in pattern)
 
 
+def load_cohort(source, sample_size, rng):
+    """Sample the roster before materializing nested histories; retain empty users."""
+    frame = pd.read_parquet(source, columns=["msno", "is_churn"])
+    if frame.empty or frame.msno.isna().any() or frame.msno.duplicated().any():
+        raise ValueError("Sequences must contain one row per non-null user")
+    if not frame.is_churn.isin([0, 1]).all():
+        raise ValueError("is_churn must contain binary non-null labels")
+    frame = frame.sort_values("msno").reset_index(drop=True)
+    n_available = len(frame)
+    if sample_size and sample_size < len(frame):
+        frame = frame.iloc[stratified_indices(frame.is_churn.to_numpy(), sample_size, rng)]
+    with duckdb.connect() as con:
+        con.register("sampled_users", frame[["msno"]])
+        histories = con.execute("""SELECT s.msno, s.seq FROM read_parquet(?) s
+                                   JOIN sampled_users u USING (msno)""", [str(source)]).df()
+    return frame.merge(histories, on="msno", how="left", sort=False,
+                       validate="one_to_one"), n_available
+
+
 def main():
     """Write train-selected patterns, holdout estimates, sensitivity and figure."""
     started = time.perf_counter()
@@ -226,22 +252,8 @@ def main():
     if not 0 < minimum <= 1 or sample_size < 0 or top < 1:
         raise ValueError("Support must be in (0,1], SEQ_SAMPLE >= 0 and SEQ_TOP >= 1")
     source = data / f"sequences_{cohort}.parquet"
-    # Sample the small roster before materializing nested histories for a million users.
-    frame = pd.read_parquet(source, columns=["msno", "is_churn"])
-    if frame.empty or frame.msno.isna().any() or frame.msno.duplicated().any():
-        raise ValueError("Sequences must contain one row per non-null user")
-    if not frame.is_churn.isin([0, 1]).all():
-        raise ValueError("is_churn must contain binary non-null labels")
-    frame = frame.sort_values("msno").reset_index(drop=True)
-    n_available = len(frame)
     rng = np.random.default_rng(42)
-    if sample_size and sample_size < len(frame):
-        frame = frame.iloc[stratified_indices(frame.is_churn.to_numpy(), sample_size, rng)]
-    with duckdb.connect() as con:
-        con.register("sampled_users", frame[["msno"]])
-        histories = con.execute("""SELECT s.msno, s.seq FROM read_parquet(?) s
-                                   JOIN sampled_users u USING (msno)""", [str(source)]).df()
-    frame = frame.merge(histories, on="msno", how="left", sort=False, validate="one_to_one")
+    frame, n_available = load_cohort(source, sample_size, rng)
     labels = frame.is_churn.to_numpy(dtype=np.int8)
     train, holdout = split_indices(labels, rng)
     vocabulary, masks = encode(frame.seq.to_numpy())
@@ -254,17 +266,39 @@ def main():
     selected = select_patterns(records, minimum, len(train))
     reported = ([r for r in selected if r["direction"] == "churn"][:(top + 1) // 2]
                 + [r for r in selected if r["direction"] == "retain"][:top // 2])
+    feb, n_available_feb = load_cohort(data / "sequences_feb.parquet", sample_size,
+                                     np.random.default_rng(42))
+    feb_labels = feb.is_churn.to_numpy(dtype=np.int8)
+    base_feb = float(feb_labels.mean())
+    # Reuse March token IDs: tokens absent in February have zero occurrence masks.
+    _, feb_masks = encode(feb.seq.to_numpy(), vocabulary)
     rows = []
     base_holdout = float(hold_labels.mean())
     for row in reported:
         matched = match_pattern(row["key"], hold_masks)
         count = int(matched.sum())
         confidence = float(hold_labels[matched].mean()) if count else None
+        matched_feb = match_pattern(row["key"], feb_masks)
+        count_feb = int(matched_feb.sum())
+        confidence_feb = float(feb_labels[matched_feb].mean()) if count_feb else None
         rows.append({**{key: row[key] for key in COLUMNS if key in row},
                      "pattern": pattern_name(row["key"], vocabulary),
                      "support_holdout": count / len(holdout),
                      "conf_holdout": confidence,
-                     "lift_holdout": confidence / base_holdout if count else None})
+                     "lift_holdout": confidence / base_holdout if count else None,
+                     "support_feb": count_feb / len(feb),
+                     "conf_feb": confidence_feb,
+                     "lift_feb": confidence_feb / base_feb if count_feb and base_feb else None})
+    log_pairs = np.asarray([(math.log(r["lift_train"]), math.log(r["lift_feb"]))
+                            for r in rows if r["lift_train"] > 0
+                            and r["lift_feb"] is not None and r["lift_feb"] > 0])
+    corr_lift = None
+    if len(log_pairs) >= 2 and np.all(np.ptp(log_pairs, axis=0) > 0):
+        corr_lift = float(np.corrcoef(log_pairs.T)[0, 1])
+    same_direction = sum(r["lift_feb"] is not None and
+                         ((r["direction"] == "churn" and r["lift_feb"] > 1) or
+                          (r["direction"] == "retain" and r["lift_feb"] < 1))
+                         for r in rows) / len(rows) if rows else None
     sensitivity = []
     for threshold in thresholds:
         count_threshold = math.ceil(threshold * len(train) - 1e-12)
@@ -280,18 +314,24 @@ def main():
     if displayed:
         y = np.arange(len(displayed))
         lifts = [r["lift_holdout"] if r["lift_holdout"] is not None else np.nan for r in displayed]
-        ax.barh(y, lifts, color=["#ce5b51" if r["direction"] == "churn" else "#329985"
-                               for r in displayed])
+        feb_lifts = [r["lift_feb"] if r["lift_feb"] is not None else np.nan for r in displayed]
+        ax.barh(y - 0.18, lifts, height=0.36, color="#4477aa",
+                label=f"Tập kiểm định {cohort} (tháng 3)" if cohort == "mar" else f"Tập kiểm định {cohort}")
+        ax.barh(y + 0.18, feb_lifts, height=0.36, color="#ee9944", label="Tháng 2")
+        ax.legend(loc="best", fontsize=8)
         ax.set_yticks(y, [r["pattern"] for r in displayed], fontsize=8)
         for index, row in enumerate(displayed):
             if row["lift_holdout"] is None:
-                ax.text(0.02, index, "No holdout matches", va="center", fontsize=8)
+                ax.text(0.02, index - 0.18, "Không có mẫu khớp ở tập kiểm định", va="center", fontsize=8)
+            if row["lift_feb"] is None:
+                ax.text(0.02, index + 0.18, "Không đủ dữ liệu tháng 2", va="center", fontsize=8)
         ax.invert_yaxis()
     else:
-        ax.text(0.5, 0.5, "No patterns pass training selection", ha="center", transform=ax.transAxes)
+        ax.text(0.5, 0.5, "Không có mẫu đạt tiêu chí trên tập huấn luyện", ha="center", transform=ax.transAxes)
     ax.axvline(1, color="black", linestyle="--", linewidth=1)
-    ax.set_xlabel("Holdout churn lift (selection and order use training data)")
-    ax.set_title(f"Sequential patterns: {cohort}, holdout n={len(holdout):,}")
+    ax.set_xlabel("Lift rời bỏ so với tỷ lệ nền từng tập (chọn và xếp mẫu theo tập huấn luyện)")
+    ax.set_ylabel("Mẫu tuần tự")
+    ax.set_title(f"Mẫu tuần tự: kiểm định {cohort} (n={len(holdout):,}) và tháng 2 (n={len(feb):,})")
     fig.tight_layout()
     fig.savefig(report / "figures" / "seq_top_patterns.png", dpi=160, bbox_inches="tight")
     plt.close(fig)
@@ -300,6 +340,12 @@ def main():
                "n_empty_sequences": int(sum(len(seq) == 0 for seq in frame.seq)),
                "base_rate": float(labels.mean()), "base_rate_train": float(train_labels.mean()),
                "base_rate_holdout": base_holdout, "min_support": minimum,
+               "feb_base_rate": base_feb, "n_users_feb": len(feb),
+               "n_available_feb": n_available_feb,
+               "corr_lift_mar_feb": corr_lift,
+               "corr_lift_mar_feb_reference": "lift_train",
+               "n_log_lift_pairs_mar_feb": len(log_pairs),
+               "share_same_direction_feb": same_direction,
                "max_pattern_length": MAX_LENGTH, "n_tested": len(records),
                "n_selected": len(selected), "n_patterns": len(rows),
                "n_churn_patterns": sum(r["direction"] == "churn" for r in rows),
