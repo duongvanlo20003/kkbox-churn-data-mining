@@ -1,0 +1,68 @@
+{
+  "n_users": 200000,
+  "k": 7,
+  "k_macro": 3,
+  "silhouette_macro": 0.363562085803605,
+  "silhouette": 0.2734210127387868,
+  "davies_bouldin": 1.4329733713178314,
+  "calinski_harabasz": 1937.3556043197016,
+  "bootstrap_ari_mean": 0.8831108294342215,
+  "bootstrap_ari_std": 0.1463793150787461,
+  "base_churn": 0.08994,
+  "names": {
+    "0": "Tự gia hạn, nghe thưa và đang im dần",
+    "1": "Ít giao dịch, nghe tăng đột biến (mới/quay lại)",
+    "2": "Trả phí tự động nhưng gần như không nghe",
+    "3": "Nghe nhiều nhưng trả thủ công",
+    "4": "Mua gói dài hạn, trả thủ công",
+    "5": "Lâu năm, giao dịch nhiều, từng hủy/đổi gói",
+    "6": "Trung thành: tự gia hạn, nghe đều"
+  },
+  "algorithms": [
+    {
+      "algorithm": "K-Means",
+      "n_clusters": 7,
+      "noise_share": 0.0,
+      "silhouette": 0.2738820025981366,
+      "davies_bouldin": 1.4383430235255312,
+      "ari_vs_kmeans": 1.0,
+      "churn_rate_spread": 0.7878494122781617,
+      "nmi_with_churn": 0.05371663607971401,
+      "runtime_s": 0.002009153366088867
+    },
+    {
+      "algorithm": "Agglomerative (Ward)",
+      "n_clusters": 7,
+      "noise_share": 0.0,
+      "silhouette": 0.28303756018665255,
+      "davies_bouldin": 1.5646821370806745,
+      "ari_vs_kmeans": 0.7556911921132957,
+      "churn_rate_spread": 0.7931120637323952,
+      "nmi_with_churn": 0.05918646977097352,
+      "runtime_s": 6.9820122718811035
+    },
+    {
+      "algorithm": "Gaussian mixture",
+      "n_clusters": 7,
+      "noise_share": 0.0,
+      "silhouette": 0.22306450754995444,
+      "davies_bouldin": 2.3589797868108975,
+      "ari_vs_kmeans": 0.6594531479681245,
+      "churn_rate_spread": 0.7608160673176153,
+      "nmi_with_churn": 0.06145400806699784,
+      "runtime_s": 0.7321295738220215
+    },
+    {
+      "algorithm": "HDBSCAN",
+      "n_clusters": 3,
+      "noise_share": 0.27113333333333334,
+      "silhouette": 0.32674037206591705,
+      "davies_bouldin": 1.2781562572205625,
+      "ari_vs_kmeans": 0.6881792407833868,
+      "churn_rate_spread": 0.008308406641071533,
+      "nmi_with_churn": 0.0001466872617529016,
+      "runtime_s": 8.327608585357666
+    }
+  ],
+  "runtime_s": 60.41926288604736
+}

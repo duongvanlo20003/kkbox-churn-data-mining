@@ -72,10 +72,15 @@ def sk_pipe(model, num, cat, scale=False):
     return make_pipeline(pre, model)
 
 
+def to_str(x):
+    """Category labels as strings; missing -> 'NA' (pandas 3 keeps NaN through astype(str))."""
+    return x.astype("object").where(x.notna(), "NA").astype(str)
+
+
 def as_cat(d, cat):
     d = d.copy()
     for c in cat:
-        d[c] = d[c].astype(str)
+        d[c] = to_str(d[c])
     return d
 
 
@@ -88,11 +93,11 @@ class LGBM:
     def _X(self, d):
         X = d[self.num + self.cat].copy()
         for c in self.cat:
-            X[c] = pd.Categorical(X[c].astype(str), categories=self.levels[c])
+            X[c] = pd.Categorical(to_str(X[c]), categories=self.levels[c])
         return X
 
     def fit(self, d, y):
-        self.levels = {c: sorted(d[c].astype(str).unique()) for c in self.cat}
+        self.levels = {c: sorted(to_str(d[c]).unique()) for c in self.cat}
         X = self._X(d)
         rng = np.random.default_rng(SEED)
         val = rng.random(len(X)) < 0.1

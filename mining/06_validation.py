@@ -29,8 +29,8 @@ from common import CATEGORICAL, DATA, METRICS, NUMERIC, REPORT, SEED, load, save
 warnings.filterwarnings("ignore")
 # reuse the LightGBM wrapper without re-running the classification script
 src = Path(__file__).with_name("03_classification.py").read_text(encoding="utf-8")
-ns = {}
-exec(src[src.index("class LGBM"):src.index("ALL_NUM, CAT")], {**globals(), "lgb": __import__("lightgbm")}, ns)
+ns = {**globals(), "lgb": __import__("lightgbm")}
+exec(src[src.index("def to_str"):src.index("ALL_NUM, CAT")], ns)
 LGBM = ns["LGBM"]
 
 out = {}
@@ -38,7 +38,7 @@ leak_file = DATA / "leakage_mar.parquet"
 if leak_file.exists():
     df = load("mar").merge(pd.read_parquet(leak_file), on="msno", how="left")
     for c in CATEGORICAL:
-        df[c] = df[c].astype(str)
+        df[c] = df[c].astype("object").where(df[c].notna(), "NA").astype(str)
     tr, te = train_test_split(df, test_size=0.3, stratify=df.is_churn, random_state=SEED)
     POST_LOG = ["post_log_active_days", "post_log_hours", "post_log_days_idle"]
     POST_TX = ["post_tx_n", "post_tx_any_cancel", "post_tx_auto_renew"]

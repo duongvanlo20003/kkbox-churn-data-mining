@@ -13,8 +13,14 @@ ranking and redundancy pruning use training users only. BH covers every pattern
 mined at the lowest sensitivity/requested threshold, including neutral patterns.
 Sensitivity reuses that family and its q-values; no holdout-based selection.
 Redundancy requires a proper sequential subpattern in the same direction with
-at least 95% of the longer pattern's log-lift magnitude. SEQ_TOP=50 limits the
-reported patterns after pruning. Holdout is descriptive replication, not a test
+at least 95% of the longer pattern's log-lift magnitude. After pruning, SEQ_TOP=50
+reserves 25 reported patterns per direction (odd limits give churn one extra).
+Churn ranks by decreasing training lift, then support; retain ranks by decreasing
+absolute training leverage, proportional to support_train * (1 - lift_train),
+then increasing lift and decreasing support. This favors broad protective
+patterns without letting churn crowd them out. Both directions keep the same
+minimum support, q < 0.01 and lift > 1.2 / < 0.8 filters; unused slots are not
+transferred between directions. Holdout is descriptive replication, not a test
 used for filtering; zero matches yield null confidence/lift.
 """
 
@@ -177,7 +183,14 @@ def select_patterns(records, minimum, n_train):
         if not redundant:
             row["direction"] = "retain" if retain else "churn"
             selected.append(row)
-    return sorted(selected, key=lambda r: (-strength(r), r["q_value"], r["key"]))
+    churn = sorted((r for r in selected if r["direction"] == "churn"),
+                   key=lambda r: (-r["lift_train"], -r["support_train"],
+                                  r["q_value"], r["key"]))
+    retain = sorted((r for r in selected if r["direction"] == "retain"),
+                    key=lambda r: (-r["support_train"] * (1 - r["lift_train"]),
+                                   r["lift_train"], -r["support_train"],
+                                   r["q_value"], r["key"]))
+    return churn + retain
 
 
 def match_pattern(pattern, masks):
@@ -239,9 +252,11 @@ def main():
     records = mine(train_masks, train_labels, min(minimum, *thresholds))
     add_statistics(records, train_labels)
     selected = select_patterns(records, minimum, len(train))
+    reported = ([r for r in selected if r["direction"] == "churn"][:(top + 1) // 2]
+                + [r for r in selected if r["direction"] == "retain"][:top // 2])
     rows = []
     base_holdout = float(hold_labels.mean())
-    for row in selected[:top]:
+    for row in reported:
         matched = match_pattern(row["key"], hold_masks)
         count = int(matched.sum())
         confidence = float(hold_labels[matched].mean()) if count else None
@@ -287,12 +302,14 @@ def main():
                "base_rate_holdout": base_holdout, "min_support": minimum,
                "max_pattern_length": MAX_LENGTH, "n_tested": len(records),
                "n_selected": len(selected), "n_patterns": len(rows),
+               "n_churn_patterns": sum(r["direction"] == "churn" for r in rows),
+               "n_retain_patterns": sum(r["direction"] == "retain" for r in rows),
                "seed": 42, "test": "Pearson chi-square (1 df), BH FDR over mined family",
                "sensitivity_fdr": "Shared family at lowest requested/sensitivity support",
                "runtime_s": round(time.perf_counter() - started, 3),
                "top5": [{**row, "support_churn_train": chosen["support_churn_train"],
                          "support_stay_train": chosen["support_stay_train"]}
-                        for row, chosen in zip(rows[:5], selected[:5])]}
+                        for row, chosen in zip(rows[:5], reported[:5])]}
     with (report / "metrics" / "sequential.json").open("w", encoding="utf-8") as handle:
         json.dump(metrics, handle, ensure_ascii=False, indent=2, allow_nan=False)
     print(f"{len(frame):,} users; {len(records):,} frequent patterns; "

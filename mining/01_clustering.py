@@ -13,6 +13,7 @@ Outputs: report/cluster_quality.csv, cluster_algorithms.csv, cluster_profile.csv
 cluster_drilldown.csv, figures/cluster_*.png, metrics/clustering.json,
 data/clusters_mar.parquet (msno -> cluster) for the other scripts.
 """
+import json
 import os
 import sys
 import time
@@ -77,13 +78,21 @@ for k in K_RANGE:
                  "min_cluster_share": np.bincount(lab).min() / len(lab)})
     print(f"k={k} sil={rows[-1]['silhouette']:.3f} DB={rows[-1]['davies_bouldin']:.3f}")
 quality = pd.DataFrame(rows)
+# Two levels: K_MACRO = best silhouette (internal validity); K = the finest solution whose
+# silhouette stays within SIL_TOL of the best and whose smallest cluster has >= 2 % of users
+# (actionable granularity). Override with CLUSTER_K.
 cand = quality[(quality.k >= 3) & (quality.min_cluster_share >= 0.02)]
-best = cand.loc[cand.silhouette.idxmax()] if len(cand) else quality.loc[quality.silhouette.idxmax()]
-k2 = quality.loc[quality.k == 2].iloc[0]
-if k2.silhouette > best.silhouette + 0.1:
-    best = k2
+if not len(cand):
+    cand = quality
+macro = cand.loc[cand.silhouette.idxmax()]
+K_MACRO = int(macro.k)
+SIL_TOL = float(os.environ.get("SIL_TOL", 0.75))
+fine = cand[cand.silhouette >= SIL_TOL * macro.silhouette]
+best = fine.loc[fine.k.idxmax()]
+if os.environ.get("CLUSTER_K"):
+    best = quality.loc[quality.k == int(os.environ["CLUSTER_K"])].iloc[0]
 K = int(best.k)
-print(f"chosen k={K}")
+print(f"macro k={K_MACRO} (silhouette {macro.silhouette:.3f}); chosen fine k={K} (silhouette {best.silhouette:.3f})")
 
 # ---- 2. stability (bootstrap ARI on a fixed reference set) ---------------------------------
 km = KMeans(K, n_init=10, random_state=SEED).fit(X)
@@ -97,13 +106,14 @@ for b in range(10):   # refit the whole pipeline (imputer medians, scaler, K-Mea
     sc_b = StandardScaler().fit(Rb.fillna(med_b))
     kb = KMeans(K, n_init=3, random_state=SEED + b + 1).fit(sc_b.transform(Rb.fillna(med_b)))
     aris.append(adjusted_rand_score(ref, kb.predict(sc_b.transform(R.iloc[ref_idx].fillna(med_b)))))
-quality["chosen"] = quality.k == K
+quality["chosen"] = np.where(quality.k == K, "fine (used)", np.where(quality.k == K_MACRO, "macro", ""))
 quality.to_csv(REPORT / "cluster_quality.csv", index=False)
 print(f"bootstrap ARI {np.mean(aris):.3f} +- {np.std(aris):.3f}")
 
 fig, axes = plt.subplots(1, 4, figsize=(16, 3.6))
 for ax, m in zip(axes, ["inertia", "silhouette", "davies_bouldin", "calinski_harabasz"]):
     ax.plot(quality.k, quality[m], marker="o"); ax.axvline(K, color="crimson", ls="--")
+    ax.axvline(K_MACRO, color="grey", ls=":")
     ax.set_title(m + (" (lower better)" if m in ("inertia", "davies_bouldin") else " (higher better)"))
     ax.set_xlabel("k")
 savefig(fig, "cluster_selection.png")
@@ -168,6 +178,12 @@ for c in z.index:
         if len(tags) == 3:
             break
     names[c] = ", ".join(tags) if tags else "trung bình"
+# analyst-assigned business names (report/segment_names.json, written after reading the z-scores)
+nf = REPORT / "segment_names.json"
+if nf.exists():
+    manual = {int(k): v for k, v in json.loads(nf.read_text(encoding="utf-8")).items()}
+    if set(manual) == set(names):
+        names = manual
 prof.insert(0, "name", pd.Series(names))
 prof.to_csv(REPORT / "cluster_profile.csv")
 z.to_csv(REPORT / "cluster_zscores.csv")
@@ -213,13 +229,20 @@ savefig(fig, "cluster_heatmap.png")
 
 full = load("mar")  # assign every user of the cohort to its nearest centroid
 full_lab = km.predict(scaler.transform(prepare(full).fillna(MED)))
-pd.DataFrame({"msno": full.msno, "cluster": full_lab}).to_parquet(DATA / "clusters_mar.parquet")
+km_macro = KMeans(K_MACRO, n_init=10, random_state=SEED).fit(X)
+macro_lab = km_macro.predict(scaler.transform(prepare(full).fillna(MED)))
+pd.DataFrame({"msno": full.msno, "cluster": full_lab, "cluster_macro": macro_lab}).to_parquet(
+    DATA / "clusters_mar.parquet")
+# how the fine segments nest inside the macro ones
+nest = pd.crosstab(pd.Series(full_lab, name="fine"), pd.Series(macro_lab, name="macro"), normalize="index")
+nest.round(3).to_csv(REPORT / "cluster_nesting.csv")
+churn_table(full.assign(cluster_macro=macro_lab), "cluster_macro").to_csv(REPORT / "cluster_profile_macro.csv")
 full_prof = churn_table(full.assign(cluster=full_lab), "cluster")
 full_prof.insert(0, "name", pd.Series(names))
 full_prof.to_csv(REPORT / "cluster_profile_full.csv")
 print("full cohort:", full_prof.round(3).to_string(), sep="\n")
 save_metrics("clustering", {
-    "n_users": len(df), "k": K, "silhouette": best.silhouette, "davies_bouldin": best.davies_bouldin,
+    "n_users": len(df), "k": K, "k_macro": K_MACRO, "silhouette_macro": macro.silhouette, "silhouette": best.silhouette, "davies_bouldin": best.davies_bouldin,
     "calinski_harabasz": best.calinski_harabasz, "bootstrap_ari_mean": np.mean(aris),
     "bootstrap_ari_std": np.std(aris), "base_churn": base, "names": names,
     "algorithms": algos_df.to_dict("records"), "runtime_s": time.time() - t0,

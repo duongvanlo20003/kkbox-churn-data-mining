@@ -1,0 +1,6 @@
+technique,type,quality,runtime_s,interpretability,business_use
+K-Means (k=7),unsupervised / clustering,"silhouette 0.273, DB 1.43, bootstrap ARI 0.88",61.66443181037903,high (centroid profiles),"segment-level strategy, campaign targeting"
+FP-Growth association rules,pattern-based,"25 productive churn rules (q<0.01, lift>=1.5), holdout lift corr 1.00",17.878576278686523,very high (if-then rules),trigger conditions for retention actions
+PrefixSpan sequential patterns,pattern-based / sequential,30 significant patterns,19.392,high (ordered event chains),early-warning journeys before churn
+LightGBM (supporting),supervised / classification,"out-of-time ROC-AUC 0.869, PR-AUC 0.603, lift@10% 6.08",16.509472370147705,medium (SHAP needed),ranking users for a limited retention budget
+Logistic regression (supporting),supervised / classification,"out-of-time ROC-AUC 0.832, PR-AUC 0.558",89.92749643325806,high (coefficients),transparent baseline

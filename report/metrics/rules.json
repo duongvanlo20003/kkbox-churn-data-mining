@@ -1,0 +1,77 @@
+{
+  "n_train": 679672,
+  "n_holdout": 291288,
+  "n_items": 45,
+  "base_churn": 0.08994191315811156,
+  "min_support": 0.01,
+  "n_itemsets": 3620,
+  "runtime_s": 17.878576278686523,
+  "n_churn_rules": 25,
+  "n_retention_rules": 10,
+  "holdout_lift_corr": 0.9982608902790656,
+  "mean_abs_conf_drift": 0.010189937030803635,
+  "top_churn": [
+    {
+      "rule": "segment=4",
+      "confidence_holdout": 0.8377893950709485,
+      "lift_holdout": 9.31478290436377,
+      "support": 0.02283601501900917
+    },
+    {
+      "rule": "plan>30d",
+      "confidence_holdout": 0.8234805482486501,
+      "lift_holdout": 9.155693039362296,
+      "support": 0.024789898656999258
+    },
+    {
+      "rule": "active=low & auto_renew=off & via=9",
+      "confidence_holdout": 0.5264111077573197,
+      "lift_holdout": 5.8527897536705265,
+      "support": 0.011186278087077296
+    },
+    {
+      "rule": "auto_renew=off & segment=1",
+      "confidence_holdout": 0.5017412935323383,
+      "lift_holdout": 5.578503679928538,
+      "support": 0.014031768264692381
+    },
+    {
+      "rule": "active=low & auto_renew=off",
+      "confidence_holdout": 0.4996514869888476,
+      "lift_holdout": 5.55526861109231,
+      "support": 0.030033604444496757
+    }
+  ],
+  "top_retain": [
+    {
+      "rule": "tenure<1y & via=7",
+      "confidence_holdout": 0.02198972902097902,
+      "lift_holdout": 0.24448811737329426,
+      "support": 0.1271731070280959
+    },
+    {
+      "rule": "segment=1 & via=7",
+      "confidence_holdout": 0.02489795918367347,
+      "lift_holdout": 0.27682265486063884,
+      "support": 0.025818335903200366
+    },
+    {
+      "rule": "expires<=31d & via=7",
+      "confidence_holdout": 0.024023532040064043,
+      "lift_holdout": 0.2671005229545469,
+      "support": 0.46093704021939996
+    },
+    {
+      "rule": "segment=6",
+      "confidence_holdout": 0.03201283644297469,
+      "lift_holdout": 0.3559279018970652,
+      "support": 0.3507588954672254
+    },
+    {
+      "rule": "expires<=31d & segment=2",
+      "confidence_holdout": 0.03906087285808956,
+      "lift_holdout": 0.434289993247345,
+      "support": 0.18076071987664638
+    }
+  ]
+}
