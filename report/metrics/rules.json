@@ -5,7 +5,7 @@
   "base_churn": 0.08994191315811156,
   "min_support": 0.01,
   "n_itemsets": 3620,
-  "runtime_s": 17.878576278686523,
+  "runtime_s": 12.083497285842896,
   "n_churn_rules": 25,
   "n_retention_rules": 10,
   "holdout_lift_corr": 0.9982608902790656,

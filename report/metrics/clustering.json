@@ -28,7 +28,7 @@
       "ari_vs_kmeans": 1.0,
       "churn_rate_spread": 0.7878494122781617,
       "nmi_with_churn": 0.05371663607971401,
-      "runtime_s": 0.002009153366088867
+      "runtime_s": 0.0010085105895996094
     },
     {
       "algorithm": "Agglomerative (Ward)",
@@ -39,7 +39,7 @@
       "ari_vs_kmeans": 0.7556911921132957,
       "churn_rate_spread": 0.7931120637323952,
       "nmi_with_churn": 0.05918646977097352,
-      "runtime_s": 6.9820122718811035
+      "runtime_s": 7.5820229053497314
     },
     {
       "algorithm": "Gaussian mixture",
@@ -50,7 +50,7 @@
       "ari_vs_kmeans": 0.6594531479681245,
       "churn_rate_spread": 0.7608160673176153,
       "nmi_with_churn": 0.06145400806699784,
-      "runtime_s": 0.7321295738220215
+      "runtime_s": 0.6426503658294678
     },
     {
       "algorithm": "HDBSCAN",
@@ -61,8 +61,8 @@
       "ari_vs_kmeans": 0.6881792407833868,
       "churn_rate_spread": 0.008308406641071533,
       "nmi_with_churn": 0.0001466872617529016,
-      "runtime_s": 8.327608585357666
+      "runtime_s": 5.420193433761597
     }
   ],
-  "runtime_s": 60.41926288604736
+  "runtime_s": 55.8525664806366
 }

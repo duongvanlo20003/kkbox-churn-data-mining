@@ -25,7 +25,7 @@
   "seed": 42,
   "test": "Pearson chi-square (1 df), BH FDR over mined family",
   "sensitivity_fdr": "Shared family at lowest requested/sensitivity support",
-  "runtime_s": 23.281,
+  "runtime_s": 24.679,
   "top5": [
     {
       "len": 3,

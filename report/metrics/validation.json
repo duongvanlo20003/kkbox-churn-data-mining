@@ -60,7 +60,7 @@
       "technique": "K-Means (k=7)",
       "type": "unsupervised / clustering",
       "quality": "silhouette 0.273, DB 1.43, bootstrap ARI 0.88",
-      "runtime_s": 61.66443181037903,
+      "runtime_s": 55.8525664806366,
       "interpretability": "high (centroid profiles)",
       "business_use": "segment-level strategy, campaign targeting"
     },
@@ -68,7 +68,7 @@
       "technique": "FP-Growth association rules",
       "type": "pattern-based",
       "quality": "25 productive churn rules (q<0.01, lift>=1.5), holdout lift corr 1.00",
-      "runtime_s": 17.878576278686523,
+      "runtime_s": 12.083497285842896,
       "interpretability": "very high (if-then rules)",
       "business_use": "trigger conditions for retention actions"
     },
@@ -76,7 +76,7 @@
       "technique": "PrefixSpan sequential patterns",
       "type": "pattern-based / sequential",
       "quality": "30 significant patterns",
-      "runtime_s": 19.392,
+      "runtime_s": 24.679,
       "interpretability": "high (ordered event chains)",
       "business_use": "early-warning journeys before churn"
     },
@@ -84,7 +84,7 @@
       "technique": "LightGBM (supporting)",
       "type": "supervised / classification",
       "quality": "out-of-time ROC-AUC 0.869, PR-AUC 0.603, lift@10% 6.08",
-      "runtime_s": 16.509472370147705,
+      "runtime_s": 18.842737197875977,
       "interpretability": "medium (SHAP needed)",
       "business_use": "ranking users for a limited retention budget"
     },
@@ -92,7 +92,7 @@
       "technique": "Logistic regression (supporting)",
       "type": "supervised / classification",
       "quality": "out-of-time ROC-AUC 0.832, PR-AUC 0.558",
-      "runtime_s": 89.92749643325806,
+      "runtime_s": 70.4387686252594,
       "interpretability": "high (coefficients)",
       "business_use": "transparent baseline"
     }

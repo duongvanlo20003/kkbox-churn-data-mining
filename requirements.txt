@@ -13,3 +13,4 @@ scikit-learn==1.9.1
 scipy==1.17.1
 shap==0.51.0
 umap-learn==0.5.12
+optuna==5.0.0

@@ -239,6 +239,20 @@ if len(abl):
     table(d, t, "Bảng 12. Ablation theo nhóm đặc trưng (LightGBM, ngoài thời gian)")
 figure(d, F / "clf_shap_summary.png", "Hình 12. Giá trị SHAP của LightGBM (5.000 người dùng tháng 3)", width=5.5)
 para(d, "CLF_NARRATIVE")
+mi = csv("model_improvement.csv")
+if len(mi):
+    d.add_heading("5.5 Thí nghiệm cải tiến mô hình (đặc trưng mới và tinh chỉnh tham số)", 2)
+    para(d, "Thiết kế 2×2: (a) thêm 13 đặc trưng lịch sử thanh toán (số lần bật/tắt tự gia hạn, chuyển từ tự "
+            "gia hạn sang thủ công, số lần lỡ hạn và độ dài lần lỡ hạn dài nhất, khoảng cách giữa các giao dịch, "
+            "số lần đổi phương thức thanh toán, giá mỗi ngày, trạng thái 3 giao dịch gần nhất, số loại gói, khoảng "
+            "thời gian được phủ), đều tính từ giao dịch ≤ T; (b) tinh chỉnh tham số LightGBM bằng Optuna (TPE). "
+            "Việc tinh chỉnh chỉ dùng dữ liệu tháng 2 (chia 80/20); tháng 3 chỉ dùng một lần cho mỗi cấu hình.")
+    t = mi[["configuration", "n_features", "roc_auc", "pr_auc", "lift@10%", "delta_auc", "delta_ci_low", "delta_ci_high"]].copy()
+    t.columns = ["Cấu hình", "Số biến", "ROC-AUC", "PR-AUC", "Lift@10%", "ΔAUC", "CI thấp", "CI cao"]
+    table(d, t, "Bảng 13b. Kết quả thí nghiệm trên tháng 3 (ΔAUC so với cấu hình A, bootstrap ghép cặp)",
+          fmt={"ROC-AUC": "{:.4f}", "PR-AUC": "{:.4f}", "Lift@10%": "{:.2f}", "ΔAUC": "{:+.4f}", "CI thấp": "{:+.4f}", "CI cao": "{:+.4f}"})
+    figure(d, F / "model_improvement.png", "Hình 12b. Mức cải thiện và tỉ trọng gain của đặc trưng mới")
+    para(d, "IMPROVE_NARRATIVE")
 
 # ---------------------------------------------------------------------------------------------
 d.add_heading("6. Evaluation & Interpretation", 1)

@@ -13,6 +13,9 @@ Final project môn Data Mining (DAM501): áp dụng quy trình Knowledge Discove
 | Mẫu tuần tự (PrefixSpan) | PAY_MANUAL → PLAN_LONG → PLAN_LONG → churn 70% (lift 7,8); PAY_AUTO → PAY_AUTO → 4,9% |
 | Phân lớp (bổ trợ, train 02/2017 → test 03/2017) | LightGBM ROC-AUC 0,869, PR-AUC 0,60, top 10% bắt 61% người churn (lift 6,1) |
 | Leakage audit | dữ liệu tháng nhãn thổi phồng AUC thêm 0,05–0,07; hành vi nghe đơn lẻ chỉ đạt AUC 0,57 |
+| Độ ổn định (áp kết quả tháng 3 lên tháng 2) | phân khúc giữ nguyên thứ tự rủi ro (Spearman 1,0; fit lại ARI 0,98); 34/35 luật và 30/30 mẫu tuần tự giữ hướng |
+| Hiệu chuẩn và giá trị kinh doanh | dự báo trung bình 6,4% so với thực tế 9,0%, EM không nhãn không sửa được; liên hệ 8–16% người rủi ro nhất cho giá trị ròng dương (giả định minh họa), chọn ngẫu nhiên thì lỗ |
+| Cải tiến mô hình (đặc trưng thanh toán + Optuna) | ROC-AUC 0,869 → 0,874 (+0,005, CI 0,005–0,006), lift@10% không đổi |
 | Bonus | Isolation Forest: 2% bất thường churn 69%; quỹ đạo nghe 8 tuần; so sánh tập con; PCA/UMAP |
 
 Kết luận: churn ở KKBox là **quyết định thanh toán** (tự gia hạn hay thủ công, gói tháng hay gói dài), hành vi nghe chỉ bổ sung. Báo cáo đầy đủ: `report/report.docx`.
@@ -40,6 +43,9 @@ Kết luận: churn ở KKBox là **quyết định thanh toán** (tự gia hạ
 | Quỹ đạo theo tuần, Isolation Forest, tập con, PCA/UMAP | `mining/04_bonus.py` | bonus |
 | PrefixSpan (bitmask NumPy) trên chuỗi giao dịch | `data_prep/02_build_sequences.py`, `mining/05_sequential.py` | mẫu tuần tự |
 | Leakage audit, so sánh thuật toán | `data_prep/03_build_leakage_audit.py`, `mining/06_validation.py` | đánh giá |
+| Độ ổn định theo thời gian (tháng 3 → tháng 2) | `mining/07_stability.py` | đánh giá |
+| Hiệu chỉnh xác suất (EM), đường lợi nhuận | `mining/08_business_value.py` | đánh giá, kinh doanh |
+| Thí nghiệm 2×2: đặc trưng thanh toán, Optuna | `mining/09_model_improvement.py` | cải tiến mô hình |
 
 ## Cách chạy
 
@@ -48,11 +54,11 @@ Yêu cầu Python 3.11+ và `pip install -r requirements.txt`.
 ```
 python data_prep/00_download.py              # Kaggle CLI (cần token) ...
 python data_prep/00_download.py <đường dẫn>/kkbox-churn-prediction-challenge.zip   # ... hoặc file "Download All"
-python run_all.py --skip-download            # toàn bộ pipeline (~30 phút trên máy 16 GB RAM)
+python run_all.py --skip-download            # toàn bộ pipeline (~45 phút trên máy 16 GB RAM)
 python run_all.py --from 01_clustering       # chạy lại từ một bước
 ```
 
-Log từng bước ở `report/logs/`, kết quả ở `report/*.csv`, `report/metrics/*.json`, hình ở `report/figures/`; `report/build_report.py` dựng `report/report.docx` từ các kết quả này và `report/narratives.json` (phần diễn giải).
+Log từng bước ở `report/logs/`, kết quả ở `report/*.csv`, `report/metrics/*.json`, hình ở `report/figures/`; `report/build_report.py` dựng `report/report.docx` từ các kết quả này và `report/narratives.json` (phần diễn giải). Xuất PDF: mở `report.docx` trong Word → Save As → PDF (hoặc `report/export_pdf.ps1` nếu Word chạy được ở chế độ ẩn).
 
 Kiểm thử nhanh không cần dữ liệu thật:
 
