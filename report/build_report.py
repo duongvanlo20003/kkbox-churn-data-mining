@@ -1,123 +1,322 @@
-"""Builds report/report.docx and report/slides.pptx from the results in report/ (csv + figures)."""
+"""Build report/report.docx from the pipeline outputs (metrics/*.json, *.csv, figures/).
+
+Every number in the report is read from the result files, so re-running the pipeline and then
+this script keeps text and results consistent. Interpretive sentences are written around
+those numbers; they are checked against the final run (see README "Kết quả chính").
+"""
+import json
+import os
+import sys
 from pathlib import Path
 
 import pandas as pd
-from docx import Document
-from docx.shared import Inches
-from pptx import Presentation
-from pptx.util import Inches as PI, Pt
 
-R = Path(__file__).resolve().parent
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from docx_helpers import bullets, figure, new_document, para, table
+
+R = Path(os.environ.get("REPORT_DIR", Path(__file__).resolve().parent))
 F = R / "figures"
-prof = pd.read_csv(R / "cluster_profile.csv")
-rules = pd.read_csv(R / "churn_rules.csv").head(8)
-imp = pd.read_csv(R / "feature_importance.csv", index_col=0).iloc[:, 0].head(6)
-
-NAMES = {0: "Đã lỡ hạn, vẫn nghe", 1: "Thuê bao đang hoạt động (nhóm lớn)",
-         2: "Trả phí nhưng không nghe", 3: "Hủy nhiều, đơn giá lạ", 4: "Đã bỏ hoàn toàn"}
-
-SECTIONS = [
- ("1. Giới thiệu và Business Understanding", [
-  "KKBox là dịch vụ nghe nhạc theo thuê bao. Doanh thu phụ thuộc vào việc người dùng gia hạn đúng hạn, nên hiểu ai rời đi và vì sao có giá trị hơn việc chỉ dự đoán.",
-  "Bài toán: khám phá các nhóm hành vi và tổ hợp đặc điểm gắn với việc không gia hạn (churn) để thiết kế chiến lược giữ chân theo từng nhóm.",
-  "Nhiệm vụ data mining: (1) Clustering để phân khúc người dùng; (2) Association rules (FP-Growth) để tìm tổ hợp dẫn tới churn; (3) Classification (Decision Tree, Random Forest) làm phương pháp bổ trợ để giải thích yếu tố quan trọng.",
-  "Giả định: nhãn churn theo định nghĩa của competition (không gia hạn trong 30 ngày sau khi hết hạn). Hạn chế: dữ liệu là một lát cắt thời gian, mẫu được lấy mất cân bằng có chủ đích (xem mục 3), tuổi thiếu nhiều."]),
- ("2. Dataset", [
-  "Nguồn: WSDM – KKBox's Churn Prediction Challenge (Kaggle), dữ liệu thật. Dùng 4 bảng: train_v2 (970.960 người dùng, 9,0% churn), members_v3 (thông tin thành viên), transactions_v2 (giao dịch đăng ký), user_logs_v2 (log nghe nhạc, ~1,4 GB).",
-  "Không dùng user_logs.csv gốc (~28 GB) vì giới hạn ổ đĩa. Các bảng nối với nhau qua msno (ID người dùng đã hash).",
-  "Thuộc tính: định danh/phân loại (city, gender, registered_via, payment_method), số (tuổi, giá, số ngày gói), thời gian (ngày đăng ký, ngày giao dịch), và số lượt nghe theo mức hoàn thành bài."]),
- ("3. Data Pre-processing", [
-  "Cột bd (tuổi) có nhiều giá trị 0, âm hoặc > 100: giữ giá trị trong 10–80, còn lại coi là thiếu và gán bằng trung vị. Hệ quả: 55% người dùng mang tuổi được gán, nên tuổi gần như không dùng được để diễn giải.",
-  "gender thiếu: gán 'unknown'. total_secs có giá trị phi thực tế (> 24 giờ/ngày): chặn ở 86.400 giây.",
-  "Aggregate theo người dùng: số giao dịch, số lần hủy, tỉ lệ tự gia hạn, giá trung bình, số ngày hoạt động, tổng số bài, tỉ lệ nghe hết (num_100) và tỉ lệ bỏ qua (num_25), số bài khác nhau, số giây nghe.",
-  "Người dùng không có log (22%) hoặc không có giao dịch được giữ lại với cờ has_logs và giá trị 0, vì bản thân việc thiếu hoạt động là một tín hiệu.",
-  "Lấy mẫu: toàn bộ 87.330 người churn và 100.000 người ở lại, tổng 187.330. Tỉ lệ churn trong mẫu là 46,6%, KHÔNG phải tỉ lệ thật 9,0%, nên chỉ so sánh tương đối giữa các nhóm, không đọc là xác suất thật."]),
- ("4. Exploratory và Descriptive Analysis", [
-  "Hình 1 và 2 cho thấy churn khác nhau rõ theo kênh đăng ký, trạng thái tự gia hạn và thời gian gắn bó.",
-  "Người từng hủy (n_cancel > 0, 11% mẫu) churn 93,1% so với 40,8% ở nhóm chưa từng hủy. Người tắt tự gia hạn churn 87,8%.",
-  "Kênh đăng ký 7 có churn 29,3% (70.668 người), trong khi kênh 3 và 4 có 64,6% và 72,6%. Kênh 9 là 56,2%.",
-  "Có log hay không gần như không phân biệt churn (46,4% so với 47,3%), nghĩa là việc đã nghe nhạc không đủ để giữ người dùng.",
-  "Kết luận cho bước mining: churn gắn chặt với hành vi đăng ký/thanh toán; hành vi nghe cho tín hiệu yếu hơn nhưng có thật."], [F / "eda_churn_by_group.png", F / "eda_churn_by_tenure.png"]),
- ("5. Data Mining Methods và Results", [
-  "5.1 K-Means: chuẩn hóa sau log1p các biến hành vi; chọn k bằng silhouette trong khoảng 2–8 (k=5 cao nhất, 0,523). Ý tưởng: gán mỗi người vào tâm cụm gần nhất, lặp cho tới khi ổn định.",
-  "5.2 FP-Growth: rời rạc hóa thuộc tính thành item (tự gia hạn, từng hủy, có log, mức nghe, mức bỏ qua, loại gói, kênh, giới tính), min_support = 0,02, min_lift = 1,2, chỉ giữ rule có vế phải là CHURN, rồi lọc rule dư thừa (rule dài mà rule con đã có confidence tương đương).",
-  "5.3 Classification (bổ trợ): Decision Tree độ sâu 4 và Random Forest 300 cây, tập kiểm tra 25%."], [F / "clusters_pca.png"], "cluster"),
- ("6. Evaluation và Interpretation", [
-  "Clustering: silhouette 0,523 ở k=5 là mức cụm tách khá rõ. Các cụm có ý nghĩa kinh doanh khác nhau rõ (bảng trên) nên diễn giải được. Điểm yếu: K-Means giả định cụm hình cầu và nhạy với outlier; cụm 3 chỉ có 1.362 người.",
-  "Association rules: các rule hàng đầu có lift ≈ 2,1 (mức tối đa có thể khi churn là 46,6%) và confidence 97–99%, nhưng phần lớn chỉ phản ánh 'đã ngừng đăng ký / không có gói' tức là hệ quả của chính định nghĩa churn, không phải nguyên nhân. Dễ hiểu và dễ hành động hơn mô hình, nhưng cần đọc thận trọng.",
-  "Classification: Random Forest đạt ROC-AUC 0,977 khi dùng mọi biến, chủ yếu nhờ n_cancel, auto_renew_rate, n_tx, avg_paid. Các biến này sát với định nghĩa nhãn, nên con số này đánh giá quá cao giá trị dự báo thực tế. Chỉ dùng hành vi nghe và hồ sơ, ROC-AUC còn 0,761, đó mới là mức tín hiệu từ hành vi.",
-  "So sánh: clustering cho cái nhìn tổng thể và dễ trình bày; rules dễ hiểu nhưng dễ bị nhiễu do nhãn; classification chính xác nhưng kém diễn giải và dễ rò rỉ thông tin. Về quy mô, cả ba chạy tốt trên 187 nghìn người dùng; FP-Growth là bước chậm nhất khi tăng số item."]),
- ("7. Business Insights và Recommendations", [
-  "Nhóm giá trị cao nên bảo vệ: cụm 'Thuê bao đang hoạt động' (65% mẫu, churn 37%, thuộc nhóm thấp trong mẫu): giữ tự gia hạn bật, nhắc gia hạn sớm.",
-  "Nhóm cứu được: cụm 'Trả phí nhưng không nghe' (churn 34% trong mẫu nhưng gần như không dùng dịch vụ, 0,1 bài): kích hoạt lại bằng gợi ý nhạc cá nhân hóa, vì họ sắp thấy không đáng tiền.",
-  "Nhóm 'Đã lỡ hạn nhưng vẫn nghe' (cụm 0, 11,7%, churn 95,8%): vẫn còn hoạt động nghe, nên chiến dịch kéo quay lại (ưu đãi tái đăng ký) có cơ hội tốt nhất.",
-  "Kênh đăng ký 3 và 4 có churn cao nhất (65–73%): xem lại trải nghiệm onboarding và chất lượng người dùng của các kênh này; kênh 7 giữ chân tốt hơn (29%).",
-  "Khuyến nghị giám sát: người dùng từng hủy và đã tắt tự gia hạn là nhóm cảnh báo sớm nhất (churn 93% và 88%).",
-  "Lưu ý khi áp dụng: nhiều tín hiệu mạnh xuất hiện vì gần định nghĩa nhãn. Cần thử lại trên dữ liệu với cửa sổ thời gian tách rời giữa quan sát và dự báo để xác nhận giá trị dự báo.",
-  "Từ phần bonus: theo dõi người dùng có xu hướng nghe giảm mạnh hoặc im lặng quá 7 ngày như cảnh báo sớm, và gửi nhắc nhở hoặc gợi ý nhạc trước khi tới hạn gia hạn."]),
- ("8. Bonus – Advanced Techniques", [
-  "Feature engineering theo thời gian (pattern theo chuỗi ngày): từ log hằng ngày của tháng 3/2017 tạo hai biến: xu hướng nghe (log tổng số giây 10 ngày cuối trừ 10 ngày đầu) và số ngày kể từ lần nghe cuối. Đây là pattern theo thời gian đơn giản, không phải khai phá chuỗi tuần tự đầy đủ.",
-  "Phát hiện: người có xu hướng nghe giảm mạnh churn 77,3% (29.867 người) so với 34,1% ở nhóm tăng mạnh. Người không nghe 15 ngày trở lên churn 82,0%, so với 37,3% ở nhóm nghe trong 1 ngày gần nhất. Hai biến mới đưa ROC-AUC của mô hình chỉ dùng nghe và hồ sơ từ 0,680 lên 0,743, cho thấy sự suy giảm hoạt động là tín hiệu cảnh báo sớm hữu ích hơn mức nghe tuyệt đối.",
-  "So sánh giữa các tập con: mô hình hành vi phân biệt tốt nhất ở kênh 7 (AUC 0,826, churn 29%) và người mới dưới 1 năm (0,798); kém hơn ở người gắn bó từ 4 năm (0,684) và kênh 9 (0,714). Nghĩa là với người dùng lâu năm, hành vi nghe nói ít về việc họ có rời đi hay không.",
-  "Giảm chiều: PCA 5 thành phần giải thích 58%, 11%, 9%, 8%, 7% phương sai (thành phần đầu thống trị, chủ yếu là cường độ nghe). UMAP (hình dưới) cho thấy churn và không churn trộn lẫn trong khối chính, chỉ tách nhẹ ở rìa. Điều này khớp với AUC vừa phải: hành vi nghe đơn lẻ không tách được churn, nên cần kết hợp tín hiệu giao dịch và xu hướng."], [F / "umap_churn.png"]),
-]
+M = R / "metrics"
+DATA = Path(os.environ.get("DATA_DIR", R.parent / "data"))
 
 
-# ---- docx
-d = Document()
-d.add_heading("DAM501 – Khám phá hành vi người dùng và mẫu rời bỏ dịch vụ nhạc đăng ký (KKBox)", 0)
-d.add_paragraph("Nhóm: Lộc Nguyễn Phúc, Khánh Phạm Duy Văn, Bình Chu Đức, Quân Đoàn Đàm, Hạnh Nguyễn Thị Hồng, Tùng Trần.")
-for sec in SECTIONS:
-    title, paras = sec[0], sec[1]
-    figs = sec[2] if len(sec) > 2 else []
-    d.add_heading(title, 1)
-    for p in paras:
-        d.add_paragraph(p)
-    if len(sec) > 3:  # cluster table
-        t = d.add_table(rows=1, cols=5); t.style = "Light Grid Accent 1"
-        for c, h in zip(t.rows[0].cells, ["Cụm", "Tên gọi", "Số người", "Churn (mẫu)", "Bài đã nghe"]):
-            c.text = h
-        for _, r in prof.iterrows():
-            cells = t.add_row().cells
-            cells[0].text = str(int(r.cluster)); cells[1].text = NAMES[int(r.cluster)]
-            cells[2].text = f"{int(r['size']):,}"; cells[3].text = f"{r.churn_rate:.1%}"
-            cells[4].text = f"{r.total_songs:.0f}"
-        d.add_paragraph()
-        t = d.add_table(rows=1, cols=4); t.style = "Light Grid Accent 1"
-        for c, h in zip(t.rows[0].cells, ["Rule (vế trái → CHURN)", "Support", "Confidence", "Lift"]):
-            c.text = h
-        for _, r in rules.iterrows():
-            cells = t.add_row().cells
-            cells[0].text = r.antecedents; cells[1].text = f"{r.support:.3f}"
-            cells[2].text = f"{r.confidence:.3f}"; cells[3].text = f"{r.lift:.2f}"
-        d.add_paragraph("Feature importance (Random Forest, đầy đủ biến): " +
-                        ", ".join(f"{k} {v:.2f}" for k, v in imp.items()))
-    for fig in figs:
-        d.add_picture(str(fig), width=Inches(5.5))
+def j(name):
+    p = M / f"{name}.json"
+    return json.loads(p.read_text(encoding="utf-8")) if p.exists() else {}
+
+
+def csv(name, **kw):
+    p = R / name
+    return pd.read_csv(p, **kw) if p.exists() else pd.DataFrame()
+
+
+def pct(x, d=1):
+    return "n/a" if x is None else f"{x * 100:.{d}f}%".replace(".", ",")
+
+
+def num(x, d=3):
+    return "n/a" if x is None else f"{x:.{d}f}".replace(".", ",")
+
+
+def thousands(x):
+    return f"{int(x):,}".replace(",", ".")
+
+
+eda, cl, ru, cf, sq, bo, va = (j(n) for n in ["eda", "clustering", "rules", "classification",
+                                               "sequential", "bonus", "validation"])
+manifest = json.loads((DATA / "manifest.json").read_text()) if (DATA / "manifest.json").exists() else {}
+oot = pd.DataFrame(cf.get("out_of_time", []))
+best = cf.get("best_model", "LightGBM")
+brow = oot.set_index("model").loc[best] if len(oot) and best in set(oot.model) else {}
+audit = pd.DataFrame(va.get("leakage_audit", []))
+abl = pd.DataFrame(cf.get("ablation", []))
+
+d = new_document()
+d.add_heading("Khám phá hành vi người dùng và các mẫu rời bỏ dịch vụ nhạc thuê bao (KKBox)", 0)
+para(d, "DAM501 – Data Mining · Final Project", bold=True)
+para(d, "Nhóm: Lộc Nguyễn Phúc, Khánh Phạm Duy Văn, Bình Chu Đức, Quân Đoàn Đàm, Hạnh Nguyễn Thị Hồng, "
+        "Tùng Trần, Phùng Quý Quốc.")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("Tóm tắt", 1)
+para(d, f"Nghiên cứu áp dụng quy trình KDD trên dữ liệu thật của KKBox ({thousands(eda.get('n_mar', 0))} "
+        f"người dùng hết hạn thuê bao tháng 3/2017, tỉ lệ churn {pct(eda.get('churn_mar'))}). Bản phân tích "
+        "đầu tiên của nhóm đạt ROC-AUC 0,977 nhưng kiểm tra lại cho thấy kết quả đó dựa vào dữ liệu của chính "
+        "tháng nhãn (rò rỉ thông tin). Phiên bản này xây lại toàn bộ pipeline với mốc quan sát (cutoff) nghiêm "
+        "ngặt, đánh giá ngoài thời gian (train tháng 2, test tháng 3) và kết hợp bốn kỹ thuật khai phá: "
+        f"phân cụm K-Means (k={cl.get('k')}), luật kết hợp FP-Growth, mẫu tuần tự PrefixSpan và phân lớp "
+        f"(bổ trợ, {best}: ROC-AUC ngoài thời gian {num(brow.get('roc_auc') if len(brow) else None)}).")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("1. Introduction & Business Understanding", 1)
+para(d, "KKBox là dịch vụ nghe nhạc trực tuyến theo thuê bao lớn nhất Đài Loan. Phần lớn gói cước dài 30 ngày, "
+        "nên mỗi tháng doanh nghiệp đối mặt với một quyết định gia hạn của từng người dùng. Giữ chân một "
+        "thuê bao rẻ hơn nhiều so với thu hút người mới; vì vậy câu hỏi kinh doanh không chỉ là “ai sẽ rời "
+        "đi” mà là “những nhóm hành vi nào, tổ hợp đặc điểm nào và chuỗi sự kiện nào dẫn đến rời bỏ”, để "
+        "thiết kế hành động giữ chân phù hợp từng nhóm.")
+para(d, "Bài toán data mining:", bold=True)
+bullets(d, [
+    "Mô tả/phân khúc (unsupervised): người dùng chia thành những nhóm hành vi nào, nhóm nào có rủi ro rời bỏ cao?",
+    "Khai phá mẫu (pattern-based): tổ hợp thuộc tính nào (luật kết hợp) và chuỗi giao dịch nào (mẫu tuần tự) "
+    "làm tăng/giảm đáng kể xác suất churn?",
+    "Phân lớp (bổ trợ): mức độ dự báo được churn từ thông tin có tại thời điểm quyết định, yếu tố nào quan trọng?",
+])
+para(d, "Định nghĩa và giả định:", bold=True)
+bullets(d, [
+    "Churn (theo KKBox): không có giao dịch thuê bao hợp lệ mới trong 30 ngày sau ngày hết hạn.",
+    "Mốc quan sát T: mọi đặc trưng chỉ dùng dữ liệu có ngày ≤ T (31/01/2017 cho nhóm hết hạn tháng 2, "
+    "28/02/2017 cho nhóm tháng 3). Ngày hết hạn đã biết tại T được phép dùng dù nằm sau T.",
+    "Hạn chế: nhóm người dùng được KKBox chọn theo tháng hết hạn (dùng thông tin sau T), dữ liệu chỉ "
+    "phản ánh một thị trường và một giai đoạn; nhãn tháng 2 chỉ hoàn tất cuối tháng 3, nên trong vận hành "
+    "thật mô hình sẽ phải train trên nhóm cũ hơn một tháng.",
+])
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("2. Dataset Description", 1)
+para(d, "Nguồn: WSDM – KKBox's Churn Prediction Challenge (Kaggle, 2017), dữ liệu thật đã ẩn danh. Các bảng nối "
+        "với nhau bằng msno (mã người dùng đã băm).")
+ds = pd.DataFrame([
+    ("train.csv", "Nhãn churn, nhóm hết hạn 02/2017", "train (mô hình), cohort feb"),
+    ("train_v2.csv", "Nhãn churn, nhóm hết hạn 03/2017", "test ngoài thời gian, khai phá mô tả"),
+    ("members_v3.csv", "Thành phố, tuổi (bd), giới tính, kênh đăng ký, ngày đăng ký", "hồ sơ"),
+    ("transactions.csv + _v2", "Giao dịch: gói, giá, tự gia hạn, hủy, ngày hết hạn", "đặc trưng thuê bao, chuỗi"),
+    ("user_logs.csv", "Log nghe hằng ngày tới 28/02/2017 (~28 GB)", "đặc trưng nghe 60 ngày trước T"),
+    ("user_logs_v2.csv", "Log nghe tháng 03/2017", "chỉ dùng cho kiểm tra rò rỉ"),
+], columns=["Bảng", "Nội dung", "Vai trò trong nghiên cứu"])
+table(d, ds, "Bảng 1. Các bảng dữ liệu sử dụng")
+if manifest:
+    rows = [(c, v["cutoff"], thousands(v["n_users"]), pct(v["churn_rate"]), pct(v["share_has_logs"]),
+             pct(v["share_has_tx"])) for c, v in manifest["cohorts"].items()]
+    table(d, pd.DataFrame(rows, columns=["Cohort", "Cutoff T", "Số người dùng", "Tỉ lệ churn", "Có log nghe",
+                                         "Có giao dịch ≤ T"]), "Bảng 2. Hai cohort sau tiền xử lý")
+para(d, "Kiểu thuộc tính: định danh (city, registered_via, payment_method, gender), số liên tục (giá, số giờ nghe, "
+        "tỉ lệ nghe hết bài), đếm (số giao dịch, số ngày hoạt động), thời gian (ngày giao dịch, ngày hết hạn, ngày "
+        "đăng ký) và chuỗi sự kiện (lịch sử giao dịch).")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("3. Data Pre-processing & Transformation", 1)
+bullets(d, [
+    "Xử lý dữ liệu lớn: DuckDB đọc trực tiếp CSV; file log 28 GB được giải nén dạng luồng và lọc ngay trong "
+    "lúc giải nén (chỉ giữ 60 ngày trước mỗi cutoff của người dùng thuộc hai cohort), nên không cần 28 GB ổ đĩa.",
+    "Hợp nhất transactions.csv và transactions_v2.csv, loại bản ghi trùng; chỉ giữ giao dịch có ngày ≤ T. "
+    "Thứ tự giao dịch cùng ngày được cố định (ngày giao dịch, ngày hết hạn, is_cancel, …) và dùng chung cho "
+    "mọi bước để “giao dịch cuối” là duy nhất.",
+    f"Làm sạch: bd ngoài [10, 80] coi là thiếu (thiếu {pct(eda.get('age_missing'))}); giới tính thiếu gán "
+    f"'unknown' ({pct(eda.get('gender_unknown'))}); total_secs chặn trong [0, 86.400] giây/ngày.",
+    "Đặc trưng thuê bao (17): số giao dịch (tổng, 180 ngày), số lần hủy, tỉ lệ tự gia hạn, tỉ lệ giảm giá, số "
+    "giao dịch 0 đồng, số lần đổi gói, số phương thức thanh toán, tổng tiền, và trạng thái giao dịch cuối "
+    "(gói, giá, tự gia hạn, hủy, số ngày từ giao dịch cuối, số ngày còn lại tới hạn).",
+    "Đặc trưng nghe (12, cửa sổ 60 ngày): số ngày hoạt động (tổng, 14 ngày cuối), tổng bài, tỉ lệ nghe hết/bỏ "
+    "qua, số bài khác nhau, số giờ, phút/ngày hoạt động, xu hướng (log giờ nghe 30 ngày sau − 30 ngày đầu), số "
+    "ngày từ lần nghe cuối, độ đều đặn (hệ số biến thiên số ngày hoạt động theo 8 tuần tính lùi từ T).",
+    "Giá trị thiếu không được điền trước khi chia dữ liệu; việc điền trung vị/one-hot nằm trong Pipeline "
+    "và chỉ học trên tập train. Với clustering, người không có log được gán giá trị “không hoạt động” rõ ràng.",
+    "Không lấy mẫu cân bằng: giữ tỉ lệ churn thật (~9%) để tỉ lệ churn, confidence và lift có nghĩa tuyệt đối. "
+    "Các thuật toán chi phí O(n²) chạy trên mẫu phân tầng (ghi rõ cỡ mẫu ở từng mục).",
+])
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("4. Exploratory & Descriptive Analysis", 1)
+eff = csv("eda_effects.csv")
+if len(eff):
+    e = eff.head(10)[["feature", "median_churn", "median_stay", "auc_effect"]].copy()
+    e.columns = ["Đặc trưng", "Trung vị (churn)", "Trung vị (ở lại)", "AUC đơn biến"]
+    table(d, e, "Bảng 3. Mười đặc trưng phân biệt churn mạnh nhất (AUC đơn biến; 0,5 = không phân biệt)")
+assoc = csv("eda_association.csv", index_col=0)
+if len(assoc):
+    a = assoc.reset_index().rename(columns={"index": "Nhóm"})[["Nhóm", "cramers_v"]]
+    a.columns = ["Biến phân nhóm", "Cramér's V"]
+    table(d, a, "Bảng 4. Mức độ liên hệ giữa các biến phân nhóm và churn (kiểm định χ², mọi p < 0,001 trừ khi ghi chú)")
+figure(d, F / "eda_churn_by_group.png", "Hình 1. Tỉ lệ churn theo nhóm (thanh lỗi = khoảng tin cậy 95% Wilson)")
+figure(d, F / "eda_distributions.png", "Hình 2. Phân phối các hành vi chính: churn (cam) và ở lại (xanh)")
+figure(d, F / "eda_churn_by_tenure.png", "Hình 3. Tỉ lệ churn theo thâm niên", width=4.5)
+figure(d, F / "eda_correlation.png", "Hình 4. Tương quan Spearman giữa các đặc trưng", width=5.5)
+para(d, "EDA_NARRATIVE")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("5. Data Mining Methods & Results", 1)
+d.add_heading("5.1 Phân cụm hành vi (K-Means, so sánh Ward/GMM/HDBSCAN)", 2)
+para(d, f"16 đặc trưng thuê bao và nghe được log-transform, chuẩn hóa; nhãn churn không tham gia phân cụm. "
+        f"Chọn k trên mẫu {thousands(cl.get('n_users', 0))} người dùng bằng bốn tiêu chí nội tại (hình 5). "
+        f"k = {cl.get('k')} được chọn (silhouette {num(cl.get('silhouette'))}, Davies–Bouldin "
+        f"{num(cl.get('davies_bouldin'), 2)}); độ ổn định bootstrap ARI {num(cl.get('bootstrap_ari_mean'), 2)} ± "
+        f"{num(cl.get('bootstrap_ari_std'), 2)}. Tâm cụm sau đó được dùng để gán toàn bộ cohort.")
+figure(d, F / "cluster_selection.png", "Hình 5. Chọn số cụm: inertia, silhouette, Davies–Bouldin, Calinski–Harabasz")
+cp = csv("cluster_profile_full.csv")
+if len(cp):
+    c = cp[["cluster", "name", "n", "churn_rate", "ci_low", "ci_high", "lift"]].copy()
+    c.columns = ["Cụm", "Đặc điểm nổi bật", "Số người", "Tỉ lệ churn", "CI thấp", "CI cao", "Lift"]
+    table(d, c, "Bảng 5. Các phân khúc trên toàn cohort tháng 3",
+          fmt={"Tỉ lệ churn": "{:.1%}", "CI thấp": "{:.1%}", "CI cao": "{:.1%}", "Lift": "{:.2f}", "Số người": "{:,.0f}"})
+figure(d, F / "cluster_heatmap.png", "Hình 6. Tâm cụm (z-score so với toàn bộ người dùng)")
+figure(d, F / "cluster_churn.png", "Hình 7. Tỉ lệ churn theo phân khúc (CI 95%)")
+alg = csv("cluster_algorithms.csv")
+if len(alg):
+    table(d, alg[["algorithm", "n_clusters", "noise_share", "silhouette", "davies_bouldin", "ari_vs_kmeans",
+                  "churn_rate_spread", "runtime_s"]],
+          "Bảng 6. So sánh thuật toán phân cụm trên cùng mẫu con", fmt={"noise_share": "{:.1%}", "churn_rate_spread": "{:.1%}"})
+para(d, "CLUSTER_NARRATIVE")
+
+d.add_heading("5.2 Luật kết hợp (FP-Growth)", 2)
+para(d, f"Mỗi người dùng được mô tả bằng {ru.get('n_items')} item (trạng thái tự gia hạn, lịch sử hủy, loại gói, "
+        "mức giá, thâm niên, kênh đăng ký, giới tính, mức hoạt động, số ngày im lặng, xu hướng nghe, tỉ lệ bỏ qua, "
+        "hạn còn lại, phân khúc). Ngưỡng định lượng học trên tập train 70%. FP-Growth liệt kê vế trái X phổ biến "
+        f"(min_support {ru.get('min_support')}, tối đa 3 item, {thousands(ru.get('n_itemsets', 0))} tập phổ biến). "
+        "Với mỗi X: confidence = P(churn | X), lift, leverage, conviction; kiểm định hai tỉ lệ X so với ¬X, hiệu "
+        "chỉnh Benjamini–Hochberg; chỉ giữ luật “productive” (tốt hơn mọi luật con ít nhất 2 điểm %). Mọi luật "
+        "được đo lại trên 30% holdout chưa dùng để khai phá.")
+cr = csv("churn_rules.csv")
+if len(cr):
+    t = cr.head(12)[["rule", "support", "confidence", "lift", "confidence_holdout", "lift_holdout"]].copy()
+    t.columns = ["Vế trái X (→ CHURN)", "Support X", "Conf (train)", "Lift", "Conf (holdout)", "Lift (holdout)"]
+    table(d, t, "Bảng 7. Luật dẫn tới churn (q < 0,01, lift ≥ 1,5, productive)",
+          fmt={"Support X": "{:.1%}", "Conf (train)": "{:.1%}", "Conf (holdout)": "{:.1%}", "Lift": "{:.2f}",
+               "Lift (holdout)": "{:.2f}"})
+rr = csv("retention_rules.csv")
+if len(rr):
+    t = rr.head(8)[["rule", "support", "confidence", "lift", "confidence_holdout"]].copy()
+    t.columns = ["Vế trái X (→ ở lại)", "Support X", "Churn (train)", "Lift churn", "Churn (holdout)"]
+    table(d, t, "Bảng 8. Luật “bảo vệ”: tổ hợp có tỉ lệ churn thấp hơn hẳn mức chung",
+          fmt={"Support X": "{:.1%}", "Churn (train)": "{:.1%}", "Churn (holdout)": "{:.1%}", "Lift churn": "{:.2f}"})
+figure(d, F / "rules_scatter.png", "Hình 8. Support và confidence của mọi tập phổ biến (viền đỏ = luật được chọn)")
+para(d, "RULES_NARRATIVE")
+
+d.add_heading("5.3 Mẫu tuần tự (PrefixSpan trên chuỗi giao dịch)", 2)
+para(d, "Mỗi giao dịch ≤ T được mã hóa thành một itemset sự kiện (PAY_AUTO/PAY_MANUAL, CANCEL, FREE, DISC, "
+        "PLAN_30/PLAN_LONG/PLAN_SHORT, PLAN_CHANGE, METHOD_CHANGE, GAP = từng lỡ hạn > 30 ngày); giữ 12 sự kiện "
+        f"cuối. PrefixSpan (tự cài đặt bằng bitmask NumPy) khai phá mẫu dài ≤ {sq.get('max_pattern_length', 4)} với "
+        f"min_support {sq.get('min_support')} trên {thousands(sq.get('n_train', 0))} chuỗi train; mỗi mẫu được kiểm "
+        f"định χ² (churn vs ở lại) và hiệu chỉnh BH ({thousands(sq.get('n_tested', 0))} giả thuyết), loại mẫu dư "
+        "thừa rồi đo lại trên holdout.")
+sp = csv("sequential_patterns.csv")
+if len(sp):
+    t = sp.head(12)[["pattern", "support_train", "conf_train", "lift_train", "conf_holdout", "lift_holdout", "direction"]].copy()
+    t.columns = ["Mẫu tuần tự", "Support", "Conf (train)", "Lift", "Conf (holdout)", "Lift (holdout)", "Hướng"]
+    table(d, t, "Bảng 9. Mẫu tuần tự có ý nghĩa thống kê", fmt={"Support": "{:.1%}", "Conf (train)": "{:.1%}",
+          "Conf (holdout)": "{:.1%}", "Lift": "{:.2f}", "Lift (holdout)": "{:.2f}"})
+figure(d, F / "seq_top_patterns.png", "Hình 9. Lift trên holdout của các mẫu tuần tự hàng đầu")
+para(d, "SEQ_NARRATIVE")
+
+d.add_heading("5.4 Phân lớp (phương pháp bổ trợ)", 2)
+para(d, f"Train trên cohort tháng 2 ({thousands(cf.get('n_train', 0))} người, churn {pct(cf.get('churn_train'))}), "
+        f"test trên cohort tháng 3 ({thousands(cf.get('n_test', 0))} người, churn {pct(cf.get('churn_test'))}) – "
+        "mô hình không thấy tháng kiểm tra. So sánh: baseline theo prior, hồi quy logistic, cây quyết định "
+        "(độ sâu 6), random forest, LightGBM. Mô hình chính được chọn bằng 5-fold CV trên tháng 2.")
+if len(oot):
+    t = oot[["model", "roc_auc", "pr_auc", "log_loss", "brier", "precision@10%", "lift@10%", "fit_s"]].copy()
+    t.columns = ["Mô hình", "ROC-AUC", "PR-AUC", "Log-loss", "Brier", "Precision@10%", "Lift@10%", "Thời gian (s)"]
+    table(d, t, "Bảng 10. Đánh giá ngoài thời gian (train 02/2017 → test 03/2017)", fmt={"Precision@10%": "{:.1%}", "Thời gian (s)": "{:.0f}"})
+cvt = csv("classification_cv.csv")
+if len(cvt):
+    table(d, cvt, "Bảng 11. 5-fold CV trên cohort tháng 2 (trung bình, độ lệch chuẩn)")
+para(d, f"Mô hình chọn theo CV: {best}; ROC-AUC 95% CI (bootstrap) {cf.get('roc_auc_ci')}, PR-AUC 95% CI {cf.get('pr_auc_ci')}.")
+figure(d, F / "clf_curves.png", "Hình 10. ROC, Precision–Recall và đường hiệu chuẩn trên tháng 3")
+figure(d, F / "clf_gains.png", "Hình 11. Cumulative gains: tỉ lệ người churn bắt được khi liên hệ x% người rủi ro nhất", width=4.5)
+if len(abl):
+    t = abl[["feature_set", "n_features", "roc_auc", "pr_auc", "lift@10%"]].copy()
+    t.columns = ["Nhóm đặc trưng", "Số biến", "ROC-AUC", "PR-AUC", "Lift@10%"]
+    table(d, t, "Bảng 12. Ablation theo nhóm đặc trưng (LightGBM, ngoài thời gian)")
+figure(d, F / "clf_shap_summary.png", "Hình 12. Giá trị SHAP của LightGBM (5.000 người dùng tháng 3)", width=5.5)
+para(d, "CLF_NARRATIVE")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("6. Evaluation & Interpretation", 1)
+d.add_heading("6.1 Kiểm tra rò rỉ thông tin (leakage audit)", 2)
+para(d, "Trên cùng tập người dùng tháng 3 và cùng một phép chia 70/30, lần lượt thêm từng nguồn dữ liệu sau "
+        "mốc T vào bộ đặc trưng sạch. Khoảng tin cậy của chênh lệch AUC tính bằng bootstrap ghép cặp.")
+if len(audit):
+    t = pd.DataFrame(audit)[["feature_set", "roc_auc", "pr_auc", "auc_inflation_vs_clean", "delta_ci_low", "delta_ci_high"]]
+    t.columns = ["Bộ đặc trưng", "ROC-AUC", "PR-AUC", "ΔAUC so với sạch", "CI thấp", "CI cao"]
+    table(d, t, "Bảng 13. Mức thổi phồng do dùng dữ liệu của tháng nhãn")
+rule = va.get("leaky_rule_no_march_tx", {})
+if rule:
+    para(d, f"Luật “không có giao dịch trong tháng 3 → churn” có confidence {pct(rule['confidence'])}, lift "
+            f"{num(rule['lift'], 2)} và bao phủ {pct(rule['share_of_churners_covered'])} người churn: đây chính là "
+            "định nghĩa nhãn, giải thích vì sao bản phân tích đầu tiên cho các luật confidence 97–99%.")
+figure(d, F / "leakage_audit.png", "Hình 13. Leakage audit")
+para(d, "AUDIT_NARRATIVE")
+
+d.add_heading("6.2 So sánh các phương pháp", 2)
+comp = csv("algorithm_comparison.csv")
+if len(comp):
+    t = comp.copy()
+    t.columns = ["Kỹ thuật", "Loại", "Chất lượng", "Thời gian (s)", "Khả năng diễn giải", "Ứng dụng kinh doanh"]
+    table(d, t, "Bảng 14. So sánh kỹ thuật theo chất lượng, chi phí, khả năng diễn giải và tính hành động",
+          fmt={"Thời gian (s)": "{:.0f}"})
+sens = csv("rule_sensitivity.csv")
+if len(sens):
+    table(d, sens, "Bảng 15. Độ nhạy của luật kết hợp theo min_support", fmt={"jaccard_top10_vs_default": "{:.2f}"})
+para(d, "EVAL_NARRATIVE")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("7. Business Insights & Recommendations", 1)
+para(d, "BUSINESS_NARRATIVE")
+
+# ---------------------------------------------------------------------------------------------
+d.add_heading("8. Advanced Techniques (bonus)", 1)
+figure(d, F / "bonus_trajectory.png", "Hình 14. Quỹ đạo nghe theo tuần trong 8 tuần trước T")
+for name, cap in [("bonus_trend.csv", "Bảng 16. Churn theo xu hướng nghe"), ("bonus_idle.csv", "Bảng 17. Churn theo số ngày im lặng")]:
+    t = csv(name)
+    if len(t):
+        t = t.rename(columns={t.columns[0]: "Nhóm"})[["Nhóm", "n", "churn_rate", "ci_low", "ci_high", "lift"]]
+        table(d, t, cap, fmt={"churn_rate": "{:.1%}", "ci_low": "{:.1%}", "ci_high": "{:.1%}", "lift": "{:.2f}", "n": "{:,.0f}"})
+an = csv("bonus_anomaly.csv")
+if len(an):
+    table(d, an, "Bảng 18. Isolation Forest: churn ở nhóm bất thường (2%) và bình thường",
+          fmt={"churn_rate": "{:.1%}", "ci_low": "{:.1%}", "ci_high": "{:.1%}", "lift": "{:.2f}"})
+sub = csv("bonus_subsets.csv")
+if len(sub):
+    table(d, sub, "Bảng 19. So sánh tập con: mô hình ngoài thời gian hoạt động thế nào trong từng nhóm",
+          fmt={"share": "{:.1%}", "churn_rate": "{:.1%}", "mean_pred": "{:.1%}", "n": "{:,.0f}"})
+figure(d, F / "umap_churn.png", "Hình 15. UMAP của đặc trưng hành vi: theo churn và theo phân khúc")
+figure(d, F / "bonus_pca_scree.png", "Hình 16. PCA scree plot", width=4.5)
+para(d, "BONUS_NARRATIVE")
+
+d.add_heading("9. Kết luận, hạn chế và hướng phát triển", 1)
+para(d, "CONCLUSION_NARRATIVE")
+
+d.add_heading("Phụ lục: tái lập kết quả", 1)
+para(d, "pip install -r requirements.txt; python run_all.py (tải dữ liệu bằng Kaggle CLI hoặc truyền file zip "
+        "“Download All”: python data_prep/00_download.py <zip>). Kiểm thử nhanh trên dữ liệu giả: "
+        "python tests/make_synthetic_data.py data_synth; DATA_DIR=data_synth REPORT_DIR=report_synth python "
+        "run_all.py --skip-download. Seed cố định 42; mọi cutoff/cỡ mẫu nằm trong data_prep/config.py và biến môi trường.")
+
+# narratives written after inspecting the final results live in narratives.json
+narr = json.loads((R / "narratives.json").read_text(encoding="utf-8")) if (R / "narratives.json").exists() else {}
+for p in d.paragraphs:
+    key = p.text.strip()
+    if key.endswith("_NARRATIVE"):
+        text = narr.get(key, "")
+        p.text = ""
+        if isinstance(text, list):
+            p.text = text[0] if text else ""
+            anchor = p
+            for extra in text[1:]:
+                new = anchor.insert_paragraph_before("")  # keep order: insert after via XML move
+                anchor._p.addnext(new._p)
+                new.text = extra
+                anchor = new
+        else:
+            p.text = text
 d.save(R / "report.docx")
-
-# ---- pptx
-pr = Presentation(); pr.slide_width, pr.slide_height = PI(13.33), PI(7.5)
-
-
-def slide(title, bullets, img=None):
-    s = pr.slides.add_slide(pr.slide_layouts[5]); s.shapes.title.text = title
-    w = PI(6.3) if img else PI(12)
-    tb = s.shapes.add_textbox(PI(0.6), PI(1.5), w, PI(5.5)).text_frame; tb.word_wrap = True
-    for i, b in enumerate(bullets):
-        p = tb.paragraphs[0] if i == 0 else tb.add_paragraph()
-        p.text = "• " + b; p.font.size = Pt(18)
-    if img:
-        s.shapes.add_picture(str(img), PI(7.2), PI(1.6), width=PI(5.6))
-
-
-slide("Khám phá hành vi và churn của dịch vụ nhạc đăng ký (KKBox)", ["DAM501 Final Project", "Dữ liệu thật: 970.960 người dùng, 9,0% churn", "Mẫu phân tích: 187.330 người dùng"])
-slide("Bài toán kinh doanh", ["Doanh thu thuê bao phụ thuộc gia hạn", "Mục tiêu: hiểu nhóm hành vi và tổ hợp đặc điểm dẫn tới churn", "Kỹ thuật: K-Means, FP-Growth, Decision Tree / Random Forest"])
-slide("Tín hiệu chính từ EDA", ["Từng hủy: churn 93% (so với 41%)", "Tắt tự gia hạn: churn 88%", "Kênh đăng ký 7: 29%; kênh 3 và 4: 65–73%", "Có nghe nhạc hay không: gần như không phân biệt churn"], F / "eda_churn_by_group.png")
-slide("5 phân khúc người dùng (K-Means, silhouette 0,52)", [f"{NAMES[int(r.cluster)]}: {int(r['size']):,} người, churn {r.churn_rate:.0%}" for _, r in prof.iterrows()], F / "clusters_pca.png")
-slide("Association rules (FP-Growth)", [f"{r.antecedents}: conf {r.confidence:.2f}, lift {r.lift:.2f}" for _, r in rules.head(5).iterrows()] + ["Lưu ý: nhiều rule phản ánh định nghĩa churn"])
-slide("Classification: đọc cho đúng", ["Random Forest đủ biến: ROC-AUC 0,977 (gần nhãn)", "Chỉ hành vi nghe và hồ sơ: ROC-AUC 0,761", "Dùng để giải thích, không để khoe độ chính xác"])
-slide("Bonus: xu hướng nghe theo thời gian", ["Nghe giảm mạnh: churn 77% (so với 34% khi tăng mạnh)", "Im lặng từ 15 ngày: churn 82%", "Thêm 2 biến thời gian: AUC (chỉ hành vi) 0,680 → 0,743", "Kênh 7 và người mới: hành vi dự báo tốt hơn; người lâu năm kém hơn"], F / "umap_churn.png")
-slide("Khuyến nghị", ["Bảo vệ nhóm đang hoạt động: nhắc gia hạn, giữ auto-renew", "Kích hoạt lại nhóm trả phí nhưng không nghe", "Ưu đãi tái đăng ký cho nhóm đã lỡ hạn nhưng vẫn nghe", "Xem lại onboarding của kênh 3 và 4", "Hạn chế: mẫu cân bằng, nhãn gần các biến giao dịch"])
-pr.save(R / "slides.pptx")
-print("built")
+print("report written:", R / "report.docx")
