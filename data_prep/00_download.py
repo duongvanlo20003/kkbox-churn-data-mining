@@ -30,8 +30,22 @@ def extract(archive: Path):
             z.extractall(DATA)
 
 
+def unpack_zip(zip_path: Path):
+    """Take the needed .7z archives out of Kaggle's "Download All" zip (no re-download)."""
+    import zipfile
+    with zipfile.ZipFile(zip_path) as z:
+        for info in z.infolist():
+            name = Path(info.filename).name
+            if name.endswith(".csv.7z") and name[:-7] in RAW_FILES and not (DATA / name).exists():
+                print("unzipping", name, file=sys.stderr)
+                with z.open(info) as src, open(DATA / name, "wb") as dst:
+                    shutil.copyfileobj(src, dst, 16 << 20)
+
+
 def main():
     DATA.mkdir(exist_ok=True)
+    if len(sys.argv) > 1:          # python data_prep/00_download.py path/to/kkbox-churn-prediction-challenge.zip
+        unpack_zip(Path(sys.argv[1]))
     files = [f for f in RAW_FILES if not (f == "user_logs" and os.environ.get("SKIP_BIG_LOGS"))]
     for name in files:
         if name == "user_logs" and (DATA / "logs_window.parquet").exists():

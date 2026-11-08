@@ -71,15 +71,9 @@ def itemise(d, ref):
                           labels=["expired_at_T", "expires<=31d", "expires>31d"]).astype(str).replace("nan", None)
     if "cluster" in d:
         it["segment"] = np.where(d.cluster.isna(), None, "segment=" + d.cluster.astype("Int64").astype(str))
-    rows = it.astype(object).where(it.notna(), None).values.tolist()
-    vocab = sorted({v for r in rows for v in r if v is not None})
-    idx = {v: i for i, v in enumerate(vocab)}
-    M = np.zeros((len(rows), len(vocab)), bool)
-    for i, r in enumerate(rows):
-        for v in r:
-            if v is not None:
-                M[i, idx[v]] = True
-    return pd.DataFrame(M, columns=vocab, index=d.index)
+    it = it.astype(object).where(it.notna(), None)
+    return pd.concat([pd.get_dummies(it[c].dropna(), prefix="", prefix_sep="").reindex(d.index, fill_value=False)
+                      for c in it.columns], axis=1).astype(bool)
 
 
 Itr, Iho = itemise(tr, tr), itemise(ho, tr)
@@ -114,14 +108,18 @@ def mine(min_support):
     r["lift"] = r.confidence / base
     r["leverage"] = r.rule_support - r.support * base
     r["conviction"] = (1 - base) / (1 - r.confidence).clip(lower=1e-9)
-    zstat = (r.confidence - base) / np.sqrt(base * (1 - base) / r.n)
+    # two-proportion z-test, X vs not-X (equivalent to the 2x2 chi-square test)
+    N, K = len(Itr), ytr.sum()
+    p1, p0 = r.confidence, (K - r.churners) / (N - r.n).clip(lower=1)
+    pool = K / N
+    zstat = (p1 - p0) / np.sqrt(pool * (1 - pool) * (1 / r.n + 1 / (N - r.n).clip(lower=1)))
     r["p_value"] = 2 * norm.sf(np.abs(zstat))
     r["q_value"] = bh_fdr(r.p_value)
     return r, time.time() - t
 
 
-def productive(r, direction):
-    conf = dict(zip(r["items"], r.confidence))
+def productive(r, direction, conf):
+    """Keep rules that improve on every sub-rule; ``conf`` covers ALL frequent itemsets."""
     keep = []
     for s, c in zip(r["items"], r.confidence):
         subs = [frozenset(x) for L in range(1, len(s)) for x in combinations(s, L)]
@@ -134,9 +132,10 @@ def productive(r, direction):
 
 
 def select(r, direction, top=25):
+    conf = dict(zip(r["items"], r.confidence))
     sig = r[r.q_value < 0.01]
     sig = sig[sig.lift >= 1.5] if direction == "churn" else sig[sig.lift <= 0.5]
-    sig = productive(sig, direction)
+    sig = productive(sig, direction, conf)
     return sig.sort_values("lift", ascending=direction != "churn").head(top)
 
 

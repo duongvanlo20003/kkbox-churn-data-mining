@@ -53,14 +53,27 @@ if leak_file.exists():
                                     "active_days_last14", "skip_ratio", "complete_ratio", "weekly_cv"]], []),
         "listening only, March logs (v1)": (POST_LOG, []),
     }
-    rows = []
+    rows, P = [], {}
     for name, (num, cat) in sets.items():
         p = LGBM(num, cat).fit(tr, tr.is_churn.values).predict_proba(te)[:, 1]
+        P[name] = p
         rows.append({"feature_set": name, "roc_auc": roc_auc_score(te.is_churn, p),
                      "pr_auc": average_precision_score(te.is_churn, p)})
         print(f"{name:38s} AUC={rows[-1]['roc_auc']:.4f} PR-AUC={rows[-1]['pr_auc']:.4f}")
     audit = pd.DataFrame(rows)
     audit["auc_inflation_vs_clean"] = audit.roc_auc - audit.roc_auc.iloc[0]
+    # paired bootstrap CI of the AUC difference vs the clean model (same resampled users)
+    y = te.is_churn.values
+    rng = np.random.default_rng(SEED)
+    clean = P[audit.feature_set.iloc[0]]
+    diffs = {k: [] for k in P}
+    for _ in range(100):
+        i = rng.integers(0, len(y), len(y))
+        a0 = roc_auc_score(y[i], clean[i])
+        for k, p in P.items():
+            diffs[k].append(roc_auc_score(y[i], p[i]) - a0)
+    audit["delta_ci_low"] = [np.percentile(diffs[k], 2.5) for k in audit.feature_set]
+    audit["delta_ci_high"] = [np.percentile(diffs[k], 97.5) for k in audit.feature_set]
     audit.to_csv(REPORT / "leakage_audit.csv", index=False)
 
     # the deterministic rule behind v1's top associations

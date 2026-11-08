@@ -159,8 +159,8 @@ cv.columns = ["_".join(c) for c in cv.columns]
 cv.to_csv(REPORT / "classification_cv.csv")
 print(cv.round(4).to_string())
 
-# ---- 3. bootstrap CI for the best model -----------------------------------------------------
-best = oot.loc[oot.roc_auc.idxmax(), "model"]
+# ---- 3. bootstrap CI for the model selected by CV -----------------------------------------------------
+best = cv.roc_auc_mean.idxmax()   # chosen on feb CV only; the mar test set is not used to choose
 rng = np.random.default_rng(SEED)
 pb = preds[best]
 boot = []

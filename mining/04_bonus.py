@@ -42,7 +42,8 @@ if logs.exists():
     lbl = DATA / "features_mar.parquet"
     traj = duckdb.sql(f"""
         WITH u AS (SELECT msno, is_churn FROM '{lbl}'),
-        w AS (SELECT l.msno, (strptime(CAST(date AS VARCHAR), '%Y%m%d')::DATE - DATE '{start}') // 7 AS week,
+        w AS (SELECT l.msno, {LOG_WINDOW_DAYS // 7 - 1}
+                       - (DATE '{cut}' - strptime(CAST(date AS VARCHAR), '%Y%m%d')::DATE) // 7 AS week,
                      count(DISTINCT date) AS days, sum(total_secs) / 3600 AS hours
               FROM '{logs}' l WHERE date BETWEEN {start:%Y%m%d} AND {cut:%Y%m%d}
                 AND msno IN (SELECT msno FROM u) GROUP BY 1, 2)
@@ -50,7 +51,7 @@ if logs.exists():
                sum(w.hours) / any_value(n.n) AS hours_per_user
         FROM w JOIN u USING (msno)
         JOIN (SELECT is_churn, count(*) n FROM u GROUP BY 1) n USING (is_churn)
-        WHERE week < {LOG_WINDOW_DAYS // 7}
+        WHERE week >= 0
         GROUP BY 1, 2 ORDER BY 1, 2""").df()
     traj.to_csv(REPORT / "bonus_trajectory.csv", index=False)
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
@@ -60,7 +61,7 @@ if logs.exists():
         axes[1].plot(t.week + 1, t.hours_per_user, marker="o", label=lab)
     axes[0].set_title("Active days per user per week"); axes[1].set_title("Listening hours per user per week")
     for a in axes:
-        a.set_xlabel(f"week (1 = {start}, last = week before cutoff {cut})"); a.legend()
+        a.set_xlabel(f"week before cutoff (last = 7 days ending {cut})"); a.legend()
     savefig(fig, "bonus_trajectory.png")
     first, last = traj.week.min(), traj.week.max()
     out["trajectory_change"] = {

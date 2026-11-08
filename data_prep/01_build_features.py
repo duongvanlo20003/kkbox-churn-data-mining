@@ -11,6 +11,7 @@ Outputs (in data/):
 
 All users of each cohort are kept (natural churn prior, ~9 %); mining scripts subsample.
 """
+import json
 import sys
 import time
 from datetime import date, timedelta
@@ -81,6 +82,13 @@ FROM read_csv_auto('{DATA}/members_v3.csv')
 WHERE msno IN (SELECT msno FROM users)""")
 
 
+ORDER_ASC = ("transaction_date, membership_expire_date, is_cancel, payment_method_id, payment_plan_days, "
+             "plan_list_price, actual_amount_paid, is_auto_renew")
+ORDER_DESC = ", ".join(c + " DESC" for c in ORDER_ASC.split(", "))
+LOG_COLS = ["active_days", "active_days_last14", "total_songs", "complete_ratio", "skip_ratio",
+            "avg_unique_songs", "total_hours", "mins_per_active_day", "listen_trend", "days_since_last_listen"]
+
+
 def build(cohort: str, cutoff: date, start: date):
     T, Ti, Si = f"DATE '{cutoff}'", ymd(cutoff), ymd(start)
     half = ymd(start + timedelta(days=LOG_WINDOW_DAYS // 2))
@@ -121,7 +129,7 @@ def build(cohort: str, cutoff: date, start: date):
       SELECT msno,                 -- weeks without activity count as 0 (via sums over K)
         sqrt(greatest(sum(n * n) / {K} - pow(sum(n) / {K}, 2), 0)) / (sum(n) / {K}) AS weekly_cv
       FROM (
-        SELECT msno, (strptime(CAST(date AS VARCHAR), '%Y%m%d')::DATE - DATE '{start}') // 7 AS w,
+        SELECT msno, ({T} - strptime(CAST(date AS VARCHAR), '%Y%m%d')::DATE) // 7 AS w,  -- 0 = last 7 days
                count(DISTINCT date) AS n
         FROM '{DATA}/logs_window.parquet'
         WHERE date BETWEEN {Si} AND {Ti}
@@ -129,14 +137,16 @@ def build(cohort: str, cutoff: date, start: date):
         GROUP BY 1, 2)
       WHERE w < {K}
       GROUP BY msno)""" if HAS_LOGS else """
-    lg AS (SELECT NULL::VARCHAR AS msno WHERE false), wk AS (SELECT NULL::VARCHAR AS msno WHERE false)"""
+    lg AS (SELECT NULL::VARCHAR AS msno, """ + ", ".join(f"NULL::DOUBLE AS {c}" for c in LOG_COLS) + """ WHERE false),
+    wk AS (SELECT NULL::VARCHAR AS msno, NULL::DOUBLE AS weekly_cv WHERE false)"""
 
     con.execute(f"""
     COPY (
     WITH ranked AS (
-      SELECT *, row_number() OVER (PARTITION BY msno
-               ORDER BY transaction_date DESC, membership_expire_date DESC, is_cancel) AS rn,
-             lag(payment_plan_days) OVER (PARTITION BY msno ORDER BY transaction_date) AS prev_plan
+      -- one canonical event order (same as data_prep/02_build_sequences.py): date, expiry,
+      -- cancel last on ties, so the last row is the latest known state at T
+      SELECT *, row_number() OVER (PARTITION BY msno ORDER BY {ORDER_DESC}) AS rn,
+             lag(payment_plan_days) OVER (PARTITION BY msno ORDER BY {ORDER_ASC}) AS prev_plan
       FROM tx),
     agg AS (
       SELECT msno,
@@ -175,6 +185,17 @@ def build(cohort: str, cutoff: date, start: date):
                      avg(has_tx) has_tx FROM '{DATA}/features_{cohort}.parquet'"""))
 
 
+manifest = {"log_window_days": LOG_WINDOW_DAYS, "has_listening_logs": HAS_LOGS, "cohorts": {}}
 for c, v in COHORTS.items():
     build(c, d(v["cutoff"]), starts[c])
+    f = f"{DATA}/features_{c}.parquet"
+    n, n_unique = con.execute(f"SELECT count(*), count(DISTINCT msno) FROM '{f}'").fetchone()
+    assert n == n_unique, f"{c}: duplicate users in feature table"
+    max_tx = con.execute(f"SELECT max(transaction_date) FROM '{DATA}/transactions_{c}.parquet'").fetchone()[0]
+    assert max_tx is None or max_tx <= int(v["cutoff"].replace("-", "")), f"{c}: transaction after cutoff"
+    manifest["cohorts"][c] = {"labels": v["labels"], "cutoff": v["cutoff"], "log_window_start": str(starts[c]),
+                              "n_users": n, "max_transaction_date": max_tx,
+                              **dict(zip(["churn_rate", "share_has_logs", "share_has_tx"], con.execute(
+                                  f"SELECT avg(is_churn), avg(has_logs), avg(has_tx) FROM '{f}'").fetchone()))}
     print(f"{c} done {time.time() - t0:.0f}s")
+(DATA / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")

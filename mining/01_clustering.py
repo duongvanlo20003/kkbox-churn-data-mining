@@ -63,7 +63,7 @@ MED = R.median()
 scaler = StandardScaler().fit(R.fillna(MED))
 X = scaler.transform(R.fillna(MED))
 rng = np.random.default_rng(SEED)
-sil_idx = rng.choice(len(X), min(20_000, len(X)), replace=False)
+sil_idx = rng.choice(len(X), min(10_000, len(X)), replace=False)
 
 # ---- 1. choose k --------------------------------------------------------------------------
 rows = []
@@ -90,10 +90,13 @@ km = KMeans(K, n_init=10, random_state=SEED).fit(X)
 ref_idx = rng.choice(len(X), min(20_000, len(X)), replace=False)
 ref = km.predict(X[ref_idx])
 aris = []
-for b in range(10):
-    bi = rng.choice(len(X), len(X), replace=True)
-    kb = KMeans(K, n_init=3, random_state=SEED + b + 1).fit(X[bi])
-    aris.append(adjusted_rand_score(ref, kb.predict(X[ref_idx])))
+for b in range(10):   # refit the whole pipeline (imputer medians, scaler, K-Means) on each bootstrap
+    bi = rng.choice(len(R), len(R), replace=True)
+    Rb = R.iloc[bi]
+    med_b = Rb.median()
+    sc_b = StandardScaler().fit(Rb.fillna(med_b))
+    kb = KMeans(K, n_init=3, random_state=SEED + b + 1).fit(sc_b.transform(Rb.fillna(med_b)))
+    aris.append(adjusted_rand_score(ref, kb.predict(sc_b.transform(R.iloc[ref_idx].fillna(med_b)))))
 quality["chosen"] = quality.k == K
 quality.to_csv(REPORT / "cluster_quality.csv", index=False)
 print(f"bootstrap ARI {np.mean(aris):.3f} +- {np.std(aris):.3f}")
