@@ -1,68 +1,67 @@
 {
   "n_users": 200000,
-  "k": 7,
+  "n_loggers": 782486,
+  "n_nolog": 188474,
+  "k": 3,
   "k_macro": 3,
-  "silhouette_macro": 0.363562085803605,
-  "silhouette": 0.2734210127387868,
-  "davies_bouldin": 1.4329733713178314,
-  "calinski_harabasz": 1937.3556043197016,
-  "bootstrap_ari_mean": 0.8831108294342215,
-  "bootstrap_ari_std": 0.1463793150787461,
-  "base_churn": 0.08994,
+  "nolog_id": 3,
+  "silhouette_macro": 0.2974359984575356,
+  "silhouette": 0.2974359984575356,
+  "davies_bouldin": 1.4894680284372281,
+  "calinski_harabasz": 1784.6876055523978,
+  "stability_ari": 0.7069287947954329,
+  "stability_ari_sd": 0.002830627725223205,
+  "jaccard_min_cluster": 0.6841753206834464,
+  "sil_tol": 0.75,
+  "ari_min": 0.8,
+  "base_churn": 0.08994191315811156,
   "names": {
-    "0": "Tự gia hạn, nghe thưa và đang im dần",
-    "1": "Ít giao dịch, nghe tăng đột biến (mới/quay lại)",
-    "2": "Trả phí tự động nhưng gần như không nghe",
-    "3": "Nghe nhiều nhưng trả thủ công",
-    "4": "Mua gói dài hạn, trả thủ công",
-    "5": "Lâu năm, giao dịch nhiều, từng hủy/đổi gói",
-    "6": "Trung thành: tự gia hạn, nghe đều"
+    "0": "Nghe nhiều, đều đặn",
+    "1": "Ít nghe, thất thường",
+    "2": "Mua gói dài hạn, trả thủ công",
+    "3": "Không có nhật ký nghe (tách theo quy tắc)"
   },
   "algorithms": [
     {
       "algorithm": "K-Means",
-      "n_clusters": 7,
+      "n_clusters": 3,
       "noise_share": 0.0,
-      "silhouette": 0.2738820025981366,
-      "davies_bouldin": 1.4383430235255312,
+      "silhouette": 0.2918965285289151,
+      "davies_bouldin": 1.4831115201400096,
       "ari_vs_kmeans": 1.0,
-      "churn_rate_spread": 0.7878494122781617,
-      "nmi_with_churn": 0.05371663607971401,
-      "runtime_s": 0.0010085105895996094
+      "churn_rate_spread": 0.7561310451882327,
+      "runtime_s": 0.0010004043579101562
     },
     {
       "algorithm": "Agglomerative (Ward)",
-      "n_clusters": 7,
+      "n_clusters": 3,
       "noise_share": 0.0,
-      "silhouette": 0.28303756018665255,
-      "davies_bouldin": 1.5646821370806745,
-      "ari_vs_kmeans": 0.7556911921132957,
-      "churn_rate_spread": 0.7931120637323952,
-      "nmi_with_churn": 0.05918646977097352,
-      "runtime_s": 7.5820229053497314
+      "silhouette": 0.3232156391668149,
+      "davies_bouldin": 1.5816160687139489,
+      "ari_vs_kmeans": 0.5438268923223083,
+      "churn_rate_spread": 0.7709274436519595,
+      "runtime_s": 7.6620774269104
     },
     {
       "algorithm": "Gaussian mixture",
-      "n_clusters": 7,
+      "n_clusters": 3,
       "noise_share": 0.0,
-      "silhouette": 0.22306450754995444,
-      "davies_bouldin": 2.3589797868108975,
-      "ari_vs_kmeans": 0.6594531479681245,
-      "churn_rate_spread": 0.7608160673176153,
-      "nmi_with_churn": 0.06145400806699784,
-      "runtime_s": 0.6426503658294678
+      "silhouette": 0.17539893318402522,
+      "davies_bouldin": 2.6497908820243166,
+      "ari_vs_kmeans": 0.16165401334873103,
+      "churn_rate_spread": 0.22144358289956698,
+      "runtime_s": 0.28902673721313477
     },
     {
       "algorithm": "HDBSCAN",
-      "n_clusters": 3,
-      "noise_share": 0.27113333333333334,
-      "silhouette": 0.32674037206591705,
-      "davies_bouldin": 1.2781562572205625,
-      "ari_vs_kmeans": 0.6881792407833868,
-      "churn_rate_spread": 0.008308406641071533,
-      "nmi_with_churn": 0.0001466872617529016,
-      "runtime_s": 5.420193433761597
+      "n_clusters": 2,
+      "noise_share": 0.42733333333333334,
+      "silhouette": 0.17371730123286577,
+      "davies_bouldin": 1.6939293167036964,
+      "ari_vs_kmeans": -0.06195770079673903,
+      "churn_rate_spread": 0.010348932777616976,
+      "runtime_s": 6.6932337284088135
     }
   ],
-  "runtime_s": 55.8525664806366
+  "runtime_s": 83.14398980140686
 }

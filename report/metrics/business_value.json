@@ -1,32 +1,32 @@
 {
   "prior_train": 0.06392287077349786,
-  "prior_em_estimate": 0.06463466897959474,
+  "prior_em_estimate": 0.06451825184902191,
   "prior_actual": 0.08994191315811156,
   "em_iterations": 17,
   "calibration": [
     {
       "version": "original (feb prior)",
-      "mean_pred": 0.06418874924364272,
+      "mean_pred": 0.06414511291588697,
       "actual_rate": 0.08994191315811156,
-      "brier": 0.05378943707175942,
-      "log_loss": 0.20242459517937508,
-      "ece": 0.025753163914468847
+      "brier": 0.053824470486235176,
+      "log_loss": 0.2022821565497901,
+      "ece": 0.02579680024222459
     },
     {
       "version": "EM prior-shift corrected",
-      "mean_pred": 0.06463476070759919,
+      "mean_pred": 0.06451832938199346,
       "actual_rate": 0.08994191315811156,
-      "brier": 0.053725138147057296,
-      "log_loss": 0.20212245777242419,
-      "ece": 0.02530715245051237
+      "brier": 0.05377014835937786,
+      "log_loss": 0.2020284299660896,
+      "ece": 0.025423583776118096
     },
     {
       "version": "oracle: true mar prior (not deployable)",
-      "mean_pred": 0.07951692223665995,
+      "mean_pred": 0.0794788298304908,
       "actual_rate": 0.08994191315811156,
-      "brier": 0.052407709153268464,
-      "log_loss": 0.1956465581134966,
-      "ece": 0.011422288469468828
+      "brier": 0.05242630344316798,
+      "log_loss": 0.19548873544518539,
+      "ece": 0.011500550484934653
     }
   ],
   "assumptions": {
@@ -44,20 +44,20 @@
     {
       "success_rate": 0.1,
       "share_contacted": 0.08,
-      "net_value_ntd": 2448218.126557295,
-      "churners_reached": 0.5551814954769266
+      "net_value_ntd": 2452004.9304101802,
+      "churners_reached": 0.5555364708576663
     },
     {
       "success_rate": 0.2,
       "share_contacted": 0.11,
-      "net_value_ntd": 6469712.817770848,
-      "churners_reached": 0.6291881369517921
+      "net_value_ntd": 6471921.95299915,
+      "churners_reached": 0.6293255467765946
     },
     {
       "success_rate": 0.3,
-      "share_contacted": 0.16,
-      "net_value_ntd": 11058138.387474157,
-      "churners_reached": 0.7075231879079354
+      "share_contacted": 0.15,
+      "net_value_ntd": 11039606.387473587,
+      "churners_reached": 0.6934730333218825
     }
   ]
 }

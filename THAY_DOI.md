@@ -30,6 +30,7 @@ Nhánh `Khanh` sửa và bổ sung khoảng 3.500 dòng code trên 27 file. Bả
 | `mining/07_stability.py` | – | **Mới**: áp nhóm khách và luật của tháng 3 lên tháng 2 |
 | `mining/08_business_value.py` | – | **Mới**: hiệu chỉnh xác suất, đường lợi nhuận |
 | `mining/09_model_improvement.py` | – | **Mới**: thêm 13 đặc trưng thanh toán, tinh chỉnh tham số bằng Optuna |
+| `mining/10_metrics_summary.py` | – | **Mới**: khung đánh giá 7 khía cạnh, độ phủ luật, PSI giữa 2 tháng, xếp hạng yếu tố ảnh hưởng |
 | `mining/common.py`, `mining/transforms.py` | Đọc dữ liệu, điền giá trị thiếu trước khi chia (gây rò rỉ nhẹ) | Không điền trước khi chia; hàm dùng chung cho các bước |
 | `report/build_report.py` | Số liệu và tên nhóm ghi tay | Lấy số từ kết quả; viết lại lời văn dễ hiểu; tự đánh số bảng/hình; dịch luật và chuỗi sang tiếng Việt (`vi_labels.py`) |
 | `report/make_diagrams.py` | – | **Mới**: sơ đồ quy trình và trục thời gian |
@@ -37,17 +38,25 @@ Nhánh `Khanh` sửa và bổ sung khoảng 3.500 dòng code trên 27 file. Bả
 | `tests/make_synthetic_data.py` | – | **Mới**: dữ liệu giả để chạy thử |
 | `report/slides.pptx` | Có (số liệu cũ) | Đã xoá vì số liệu sai; slide mới sẽ làm sau |
 
-## 3. Kết quả trước và sau
+## 3. Sửa sau khi rà soát phương pháp (vòng 11)
+
+- Bản ghi gói 0 ngày (615 nghìn giao dịch) coi là "không rõ gói" ở `01_build_features.py`, `02_build_sequences.py` (Codex), `09_model_improvement.py`.
+- Ngày hết hạn hỏng, ngày đăng ký sau mốc quan sát → thiếu; thêm cờ `has_member`; `manifest.json` ghi số bản ghi lỗi.
+- `01_clustering.py`: tách khách không có nhật ký theo quy tắc; chọn k bằng silhouette + độ ổn định (không dùng nhãn); Jaccard từng cụm; bảng nhiệt trong không gian chuẩn hoá.
+- `07_stability.py`: gán nhóm quy tắc cho tháng 2 giống tháng 3.
+- Dữ liệu giả (`tests/`) có thêm khách không có nhật ký và bản ghi gói 0 ngày để kiểm thử các nhánh mới.
+
+## 4. Kết quả trước và sau
 
 | Chỉ số | Bản cũ | Bản mới |
 |---|---|---|
-| ROC-AUC mô hình | 0,977 (có rò rỉ) | 0,869 (kiểm tra trên tháng khác) |
+| ROC-AUC mô hình | 0,977 (công bố, có rò rỉ, kiểm tra trong cùng tháng) | 0,870 (kiểm tra trên tháng sau). So sánh công bằng trên cùng phép chia: rò rỉ làm tăng ảo 0,920 → 0,976 |
 | Luật mạnh nhất | "không có nhật ký nghe + không có gói (trong tháng 3) → rời bỏ 99,7%" (gần như chính là định nghĩa nhãn) | "gói > 30 ngày → rời bỏ 83%", kiểm tra lại trên dữ liệu riêng và trên tháng 2 |
-| Số nhóm khách | 5 (dựa trên dữ liệu tháng 3) | 7, lặp lại ở tháng 2 |
+| Số nhóm khách | 5 (dựa trên dữ liệu tháng 3, có cụm nhân tạo) | 3 cụm + 1 nhóm quy tắc; cấu trúc vừa phải nhưng trung thực, lặp lại ở tháng 2 |
 | Hành vi nghe nhạc | Có vẻ quan trọng | Gần như không phân biệt được ai rời bỏ (phát hiện thật sau khi bỏ rò rỉ) |
 | Kỹ thuật khai phá | 3 | 4 kỹ thuật chính + phát hiện bất thường, PCA/UMAP |
 
-## 4. Phân công Claude – Codex
+## 5. Phân công Claude – Codex
 
 - **Codex**: review code bản cũ (tìm ra lỗi rò rỉ và lỗi `rank + qcut`), viết phần mẫu tuần tự (`02_build_sequences.py`, `05_sequential.py`), review chéo code và soát toàn bộ số liệu, văn phong trong báo cáo.
 - **Claude**: thiết kế lại quy trình, viết các phần còn lại, chạy trên dữ liệu thật, viết báo cáo.

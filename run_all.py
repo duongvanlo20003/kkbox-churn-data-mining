@@ -28,6 +28,7 @@ STEPS = [
     "mining/07_stability.py",
     "mining/08_business_value.py",
     "mining/09_model_improvement.py",
+    "mining/10_metrics_summary.py",
     "report/make_diagrams.py",
     "report/build_report.py",
 ]

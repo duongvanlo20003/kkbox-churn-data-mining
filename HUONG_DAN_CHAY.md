@@ -44,7 +44,7 @@ Cách khác: nếu đã có token Kaggle trong `C:\Users\<tên máy>\.kaggle\`, 
 python run_all.py --skip-download
 ```
 
-Chương trình chạy lần lượt các bước dưới đây và dừng ngay nếu một bước lỗi. Nhật ký từng bước nằm ở `report/logs/<tên bước>.log`.
+Chương trình chạy lần lượt 16 bước dưới đây và dừng ngay nếu một bước lỗi. Nhật ký từng bước nằm ở `report/logs/<tên bước>.log`.
 
 | Bước | File | Làm gì | Thời gian* |
 |---|---|---|---|
@@ -61,8 +61,9 @@ Chương trình chạy lần lượt các bước dưới đây và dừng ngay 
 | 11 | `mining/07_stability.py` | Kiểm tra lại trên tháng 2 | < 1 phút |
 | 12 | `mining/08_business_value.py` | Hiệu chỉnh xác suất, đường lợi nhuận | < 1 phút |
 | 13 | `mining/09_model_improvement.py` | Thử thêm đặc trưng và tinh chỉnh tham số | ~12 phút |
-| 14 | `report/make_diagrams.py` | Vẽ sơ đồ quy trình, trục thời gian | vài giây |
-| 15 | `report/build_report.py` | Dựng `report/report.docx` | vài giây |
+| 14 | `mining/10_metrics_summary.py` | Bảng đánh giá 7 khía cạnh, xếp hạng yếu tố ảnh hưởng | < 1 phút |
+| 15 | `report/make_diagrams.py` | Vẽ sơ đồ quy trình, trục thời gian | vài giây |
+| 16 | `report/build_report.py` | Dựng `report/report.docx` | vài giây |
 
 \* Đo trên laptop 16 GB RAM.
 
@@ -82,6 +83,7 @@ Chỉ chạy một bước: `python mining/02_association_rules.py`.
 | `report/figures/` | Toàn bộ hình (PNG) |
 | `report/*.csv` | Bảng kết quả (phân khúc, luật, mẫu tuần tự, kết quả mô hình…) |
 | `report/metrics/*.json` | Các chỉ số tóm tắt của từng bước |
+| `report/metrics_summary.csv`, `report/factor_summary.csv` | Bảng đánh giá 7 khía cạnh; xếp hạng các yếu tố ảnh hưởng |
 | `data/manifest.json` | Kiểm tra dữ liệu: số khách, tỉ lệ rời bỏ, ngày giao dịch muộn nhất (phải trước mốc quan sát) |
 
 ## 6. Chạy thử nhanh không cần dữ liệu thật (~2 phút)
@@ -103,6 +105,7 @@ Remove-Item Env:DATA_DIR, Env:REPORT_DIR      # trả lại cài đặt bình th
 |---|---|---|
 | `CLUSTER_SAMPLE` | 200000 | Số khách dùng để chọn số cụm |
 | `CLUSTER_K` | tự chọn | Ép số cụm cố định |
+| `SIL_TOL`, `ARI_MIN`, `CLUSTER_BOOT` | 0.75, 0.8, 5 | Quy tắc chọn số cụm: silhouette ≥ SIL_TOL × tốt nhất và độ ổn định ≥ ARI_MIN; số lần bootstrap |
 | `MIN_SUPPORT` | 0.01 | Ngưỡng support của luật kết hợp |
 | `SEQ_SAMPLE` | 300000 | Số khách dùng cho mẫu tuần tự |
 | `N_TRIALS` | 30 | Số lần thử khi tinh chỉnh tham số |
