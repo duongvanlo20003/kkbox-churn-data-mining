@@ -20,7 +20,7 @@ for p in (FIG, METRICS):
     p.mkdir(parents=True, exist_ok=True)
 SEED = 42
 
-PROFILE = ["age", "tenure_days"]
+PROFILE = ["age", "tenure_days", "has_member"]
 CATEGORICAL = ["city", "registered_via", "gender", "last_payment_method"]
 SUBSCRIPTION = ["n_tx", "n_tx_180d", "n_cancel", "auto_renew_rate", "discount_rate", "n_free_tx",
                 "n_plan_changes", "n_payment_methods", "total_paid", "days_since_first_tx",
@@ -35,7 +35,7 @@ NUMERIC = PROFILE + SUBSCRIPTION + LISTENING
 def load(cohort="mar", sample=None, seed=SEED):
     """Cohort feature table. ``sample``: stratified subsample size (keeps the natural prior)."""
     df = pd.read_parquet(DATA / f"features_{cohort}.parquet")
-    for c in ("has_logs", "has_tx"):
+    for c in ("has_logs", "has_tx", "has_member"):
         df[c] = df[c].astype(int)
     # counts are genuinely zero for users without logs / transactions
     zero = ["active_days", "active_days_last14", "total_songs", "total_hours", "n_tx", "n_tx_180d",

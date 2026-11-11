@@ -35,11 +35,12 @@ from transforms import itemise, prepare
 N = int(os.environ.get("CLUSTER_SAMPLE", 200_000))
 model = joblib.load(DATA / "cluster_model.joblib")
 scaler, km, MED, names = model["scaler"], model["km"], model["median"], model["names"]
-K = km.n_clusters
+NOLOG = model.get("nolog_id", km.n_clusters)
+K = km.n_clusters + 1          # K-Means clusters + the rule-based "no listening log" segment
 
 mar = load("mar").merge(pd.read_parquet(DATA / "clusters_mar.parquet")[["msno", "cluster"]], on="msno")
 feb = load("feb")
-feb["cluster"] = km.predict(scaler.transform(prepare(feb).fillna(MED)))
+feb["cluster"] = np.where(feb.has_logs == 1, km.predict(scaler.transform(prepare(feb).fillna(MED))), NOLOG)
 out = {"base_mar": mar.is_churn.mean(), "base_feb": feb.is_churn.mean(), "k": K}
 
 # ---- 1a. same segments, one month earlier ----------------------------------------------------
@@ -55,11 +56,11 @@ out["segment_lift_spearman"] = spearmanr(seg.lift_mar, seg.lift_feb).statistic
 out["segment_share_max_abs_diff"] = float((seg.share_mar - seg.share_feb).abs().max())
 
 # ---- 1b. refit on feb: does the same structure re-emerge? ---------------------------------------
-fs = feb.sample(min(N, len(feb)), random_state=SEED)
+fs = feb[feb.has_logs == 1].sample(min(N, int((feb.has_logs == 1).sum())), random_state=SEED)
 Rf = prepare(fs)
 med_f = Rf.median()
 sc_f = StandardScaler().fit(Rf.fillna(med_f))
-km_f = KMeans(K, n_init=10, random_state=SEED).fit(sc_f.transform(Rf.fillna(med_f)))
+km_f = KMeans(km.n_clusters, n_init=10, random_state=SEED).fit(sc_f.transform(Rf.fillna(med_f)))
 out["ari_feb_refit_vs_mar_model"] = adjusted_rand_score(fs.cluster, km_f.labels_)
 # centroids of the feb refit expressed in the mar feature space, matched to mar centroids
 cent_f = scaler.transform(pd.DataFrame(sc_f.inverse_transform(km_f.cluster_centers_), columns=Rf.columns))

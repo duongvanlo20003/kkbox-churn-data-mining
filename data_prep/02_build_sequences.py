@@ -3,9 +3,12 @@
 An itemset preserves simultaneous business facts without inventing a token order
 inside a transaction. Separate itemsets represent strictly later transaction rows.
 PAY_AUTO/PAY_MANUAL, FREE and DISC describe non-cancellation transactions; FREE
-and DISC may coexist. PLAN_30, PLAN_LONG and PLAN_SHORT describe plan duration.
-Changes compare adjacent rows in the complete history, before truncation. GAP
-means the new transaction is over 30 days after the previous row's expiry.
+and DISC may coexist; DISC requires a positive list price. PLAN_30, PLAN_LONG
+and PLAN_SHORT describe positive plan durations; zero means an unknown plan.
+PLAN_CHANGE compares a positive duration with the most recent positive duration,
+skipping unknown plans. METHOD_CHANGE compares adjacent rows. GAP means the new
+transaction is over 30 days after the most recent valid expiry; expiries before
+2015-01-01 are treated as missing. Comparisons use full history before truncation.
 Users without transactions have an empty sequence, not an artificial event.
 """
 
@@ -52,8 +55,10 @@ def build(con, cohort):
           WITH history AS (
             SELECT *, row_number() OVER w AS event_no,
                    count(*) OVER (PARTITION BY msno) AS n_events,
-                   lag(edate) OVER w AS prev_expiry,
-                   lag(payment_plan_days) OVER w AS prev_plan,
+                   lag(CASE WHEN edate >= DATE '2015-01-01' THEN edate END
+                       IGNORE NULLS) OVER w AS prev_expiry,
+                   lag(CASE WHEN payment_plan_days > 0 THEN payment_plan_days END
+                       IGNORE NULLS) OVER w AS prev_plan,
                    lag(payment_method_id) OVER w AS prev_method
             FROM read_parquet({sql_path(source)})
             WHERE transaction_date <= {cutoff}
@@ -63,12 +68,14 @@ def build(con, cohort):
               CASE WHEN is_cancel = 1 THEN 'CANCEL'
                    WHEN is_auto_renew = 1 THEN 'PAY_AUTO' ELSE 'PAY_MANUAL' END,
               CASE WHEN coalesce(is_cancel, 0) = 0 AND actual_amount_paid = 0 THEN 'FREE' END,
-              CASE WHEN coalesce(is_cancel, 0) = 0 AND actual_amount_paid < plan_list_price
+              CASE WHEN coalesce(is_cancel, 0) = 0 AND plan_list_price > 0
+                        AND actual_amount_paid < plan_list_price
                    THEN 'DISC' END,
               CASE WHEN payment_plan_days = 30 THEN 'PLAN_30'
                    WHEN payment_plan_days > 30 THEN 'PLAN_LONG'
-                   WHEN payment_plan_days >= 0 THEN 'PLAN_SHORT' END,
-              CASE WHEN prev_plan <> payment_plan_days THEN 'PLAN_CHANGE' END,
+                   WHEN payment_plan_days > 0 THEN 'PLAN_SHORT' END,
+              CASE WHEN payment_plan_days > 0 AND prev_plan <> payment_plan_days
+                   THEN 'PLAN_CHANGE' END,
               CASE WHEN tdate - prev_expiry > 30 THEN 'GAP' END,
               CASE WHEN prev_method <> payment_method_id THEN 'METHOD_CHANGE' END
             ] IF token IS NOT NULL]) AS tokens

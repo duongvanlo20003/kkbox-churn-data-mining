@@ -142,35 +142,44 @@ def build(cohort: str, cutoff: date, start: date):
 
     con.execute(f"""
     COPY (
-    WITH ranked AS (
+    WITH clean AS (
+      -- data-quality rules: payment_plan_days = 0 (with list price 0) are old records without plan
+      -- information, not real plans; expiry dates before 2015 are corrupt
+      SELECT *, CASE WHEN payment_plan_days > 0 THEN payment_plan_days END AS plan_days_valid,
+                CASE WHEN plan_list_price > 0 THEN plan_list_price END AS list_price_valid,
+                CASE WHEN edate >= DATE '2015-01-01' THEN edate END AS edate_valid
+      FROM tx),
+    ranked AS (
       -- one canonical event order (same as data_prep/02_build_sequences.py): date, expiry,
       -- cancel last on ties, so the last row is the latest known state at T
       SELECT *, row_number() OVER (PARTITION BY msno ORDER BY {ORDER_DESC}) AS rn,
-             lag(payment_plan_days) OVER (PARTITION BY msno ORDER BY {ORDER_ASC}) AS prev_plan
-      FROM tx),
+             lag(plan_days_valid IGNORE NULLS) OVER (PARTITION BY msno ORDER BY {ORDER_ASC}) AS prev_plan
+      FROM clean),
     agg AS (
       SELECT msno,
         count(*) AS n_tx,
         count(*) FILTER (WHERE tdate > {T} - INTERVAL 180 DAY) AS n_tx_180d,
         sum(is_cancel) AS n_cancel,
         avg(is_auto_renew) AS auto_renew_rate,
-        avg(CASE WHEN actual_amount_paid < plan_list_price THEN 1 ELSE 0 END) AS discount_rate,
+        avg(CASE WHEN list_price_valid IS NOT NULL THEN (actual_amount_paid < list_price_valid)::INT END) AS discount_rate,
         sum(CASE WHEN actual_amount_paid = 0 THEN 1 ELSE 0 END) AS n_free_tx,
-        sum(CASE WHEN prev_plan IS NOT NULL AND prev_plan <> payment_plan_days THEN 1 ELSE 0 END) AS n_plan_changes,
+        sum(CASE WHEN plan_days_valid IS NOT NULL AND prev_plan IS NOT NULL AND prev_plan <> plan_days_valid
+                 THEN 1 ELSE 0 END) AS n_plan_changes,           -- only between known plans
         count(DISTINCT payment_method_id) AS n_payment_methods,
         sum(actual_amount_paid) AS total_paid,
         {T} - min(tdate) AS days_since_first_tx
       FROM ranked GROUP BY msno),
     last AS (
-      SELECT msno, payment_method_id AS last_payment_method, payment_plan_days AS last_plan_days,
-             plan_list_price AS last_list_price, actual_amount_paid AS last_paid,
+      SELECT msno, payment_method_id AS last_payment_method, plan_days_valid AS last_plan_days,
+             list_price_valid AS last_list_price, actual_amount_paid AS last_paid,
              is_auto_renew AS last_auto_renew, is_cancel AS last_is_cancel,
              {T} - tdate AS days_since_last_tx,
-             edate - {T} AS days_to_expire        -- expiry known at T (may lie after T)
+             edate_valid - {T} AS days_to_expire  -- expiry known at T (may lie after T); corrupt -> NULL
       FROM ranked WHERE rn = 1),
     {logs_sql}
     SELECT c.msno, c.is_churn, m.city, m.registered_via, m.gender, m.age,
-           {T} - m.reg_date AS tenure_days,
+           CASE WHEN m.reg_date <= {T} THEN {T} - m.reg_date END AS tenure_days,  -- registered after T -> NULL
+           (m.msno IS NOT NULL)::INT AS has_member,
            a.* EXCLUDE (msno), l.* EXCLUDE (msno),
            g.* EXCLUDE (msno), w.weekly_cv,
            (g.msno IS NOT NULL)::INT AS has_logs, (a.msno IS NOT NULL)::INT AS has_tx
@@ -198,4 +207,13 @@ for c, v in COHORTS.items():
                               **dict(zip(["churn_rate", "share_has_logs", "share_has_tx"], con.execute(
                                   f"SELECT avg(is_churn), avg(has_logs), avg(has_tx) FROM '{f}'").fetchone()))}
     print(f"{c} done {time.time() - t0:.0f}s")
+manifest["data_quality"] = dict(zip(
+    ["tx_rows", "tx_plan_days_zero", "tx_expiry_before_2015", "tx_expiry_before_tx_date"], con.execute(f"""
+    SELECT count(*), count(*) FILTER (WHERE payment_plan_days = 0),
+           count(*) FILTER (WHERE membership_expire_date < 20150101),
+           count(*) FILTER (WHERE membership_expire_date < transaction_date)
+    FROM '{DATA}/tx_cohort.parquet'""").fetchone()))
+manifest["data_quality"]["users_registered_after_cutoff"] = {
+    c: con.execute(f"SELECT count(*) FROM mem m JOIN cohort k USING (msno) WHERE k.cohort = '{c}' "
+                   f"AND m.reg_date > DATE '{v['cutoff']}'").fetchone()[0] for c, v in COHORTS.items()}
 (DATA / "manifest.json").write_text(json.dumps(manifest, indent=2, default=str), encoding="utf-8")

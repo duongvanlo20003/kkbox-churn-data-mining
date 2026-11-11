@@ -40,11 +40,13 @@ for i, u in enumerate(ids):
         price = 149 if plan == 30 else 447
         paid = price if rng.random() > 0.1 else 0
         cancel = int(rng.random() < risk[i] * 0.15)
-        tx.append((u, rng.choice([36, 38, 39, 41]), plan, price, paid, auto, ymd(t), ymd(t + timedelta(days=plan)), cancel))
+        p_days = 0 if rng.random() < 0.04 else plan                   # ~4 % records without plan info, as in KKBox
+        tx.append((u, rng.choice([36, 38, 39, 41]), p_days, price if p_days else 0, paid, auto, ymd(t),
+                   ymd(t + timedelta(days=plan)), cancel))
         t -= timedelta(days=plan)
     if not churn[i]:                       # renewal after expiry (appears only in transactions_v2)
         tx.append((u, 41, 30, 149, 149, auto, ymd(expire), ymd(expire + timedelta(days=30)), 0))
-    act = max(0.05, 0.9 - risk[i] * 0.7)
+    act = 0.0 if i % 7 == 0 else max(0.05, 0.9 - risk[i] * 0.7)   # ~14 % users without listening logs
     for day in pd.date_range("2016-11-15", "2017-03-31"):
         drop = 0.5 if (churn[i] and day.date() > expire) else 1.0
         if rng.random() < act * drop:

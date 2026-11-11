@@ -43,11 +43,15 @@ def payment_history(cohort):
     """Payment-history features from transactions_<cohort>.parquet (already cut at the cohort's T)."""
     f = DATA / f"transactions_{cohort}.parquet"
     return duckdb.execute(f"""
-    WITH t AS (
+    WITH t0 AS (   -- same data-quality rules as data_prep/01_build_features.py
+      SELECT * REPLACE (CASE WHEN payment_plan_days > 0 THEN payment_plan_days END AS payment_plan_days,
+                        CASE WHEN edate >= DATE '2015-01-01' THEN edate END AS edate)
+      FROM '{f}'),
+    t AS (
       SELECT *, row_number() OVER (PARTITION BY msno ORDER BY {ORDER.replace(', ', ' DESC, ')} DESC) AS rk,
-             lag(is_auto_renew) OVER w AS prev_auto, lag(edate) OVER w AS prev_exp,
+             lag(is_auto_renew) OVER w AS prev_auto, lag(edate IGNORE NULLS) OVER w AS prev_exp,
              lag(tdate) OVER w AS prev_t, lag(payment_method_id) OVER w AS prev_method
-      FROM '{f}' WINDOW w AS (PARTITION BY msno ORDER BY {ORDER}))
+      FROM t0 WINDOW w AS (PARTITION BY msno ORDER BY {ORDER}))
     SELECT msno,
       sum(CASE WHEN prev_auto IS NOT NULL AND prev_auto <> is_auto_renew THEN 1 ELSE 0 END) AS n_autorenew_switches,
       sum(CASE WHEN prev_auto = 1 AND is_auto_renew = 0 THEN 1 ELSE 0 END) AS n_auto_to_manual,
