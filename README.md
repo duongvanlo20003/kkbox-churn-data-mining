@@ -4,7 +4,7 @@ Final project môn Data Mining (DAM501): áp dụng quy trình Knowledge Discove
 
 > Nhánh `Khanh`: phiên bản 2 của pipeline. Phiên bản 1 (nhánh `main`) dùng dữ liệu của chính tháng nhãn nên bị rò rỉ thông tin (AUC 0,977, luật confidence 97–99%). Phiên bản này cắt mọi đặc trưng tại một mốc quan sát, đánh giá ngoài thời gian và đo lại mức rò rỉ (xem `report/leakage_audit.csv`).
 
-**Tài liệu:** [Hướng dẫn chạy code từng bước](HUONG_DAN_CHAY.md) · [Những gì đã thay đổi so với bản cũ](THAY_DOI.md) · [Báo cáo](report/report.docx)
+**Tài liệu:** [Hướng dẫn chạy code từng bước](HUONG_DAN_CHAY.md) · [Những gì đã thay đổi so với bản cũ](THAY_DOI.md) · [Đánh giá phương pháp và tổng hợp cải tiến](DANH_GIA_PHUONG_PHAP.md) · [Báo cáo](report/report.docx)
 
 ## Kết quả chính
 
