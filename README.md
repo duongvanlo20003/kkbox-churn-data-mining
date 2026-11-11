@@ -58,7 +58,7 @@ python run_all.py --skip-download            # toàn bộ pipeline (~45 phút tr
 python run_all.py --from 01_clustering       # chạy lại từ một bước
 ```
 
-Log từng bước ở `report/logs/`, kết quả ở `report/*.csv`, `report/metrics/*.json`, hình ở `report/figures/`; `report/build_report.py` dựng `report/report.docx` từ các kết quả này và `report/narratives.json` (phần diễn giải). Xuất PDF: mở `report.docx` trong Word → Save As → PDF (hoặc `report/export_pdf.ps1` nếu Word chạy được ở chế độ ẩn).
+Log từng bước ở `report/logs/`, kết quả ở `report/*.csv`, `report/metrics/*.json`, hình ở `report/figures/`; `report/make_diagrams.py` vẽ sơ đồ quy trình và trục thời gian; `report/build_report.py` dựng `report/report.docx` từ các kết quả này. Xuất PDF: mở `report.docx` trong Word → Save As → PDF (hoặc `report/export_pdf.ps1` nếu Word chạy được ở chế độ ẩn).
 
 Kiểm thử nhanh không cần dữ liệu thật:
 

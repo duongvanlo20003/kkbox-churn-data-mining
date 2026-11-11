@@ -11,3 +11,4 @@ data_synth/
 report_synth/
 report/logs/
 *.parquet
+report/report_moi.docx
