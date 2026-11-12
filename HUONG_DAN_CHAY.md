@@ -44,7 +44,7 @@ Cách khác: nếu đã có token Kaggle trong `C:\Users\<tên máy>\.kaggle\`, 
 python run_all.py --skip-download
 ```
 
-Chương trình chạy lần lượt 16 bước dưới đây và dừng ngay nếu một bước lỗi. Nhật ký từng bước nằm ở `report/logs/<tên bước>.log`.
+Chương trình chạy lần lượt 19 bước dưới đây và dừng ngay nếu một bước lỗi. Nhật ký từng bước nằm ở `report/logs/<tên bước>.log`.
 
 | Bước | File | Làm gì | Thời gian* |
 |---|---|---|---|
@@ -62,8 +62,11 @@ Chương trình chạy lần lượt 16 bước dưới đây và dừng ngay n�
 | 12 | `mining/08_business_value.py` | Hiệu chỉnh xác suất, đường lợi nhuận | < 1 phút |
 | 13 | `mining/09_model_improvement.py` | Thử thêm đặc trưng và tinh chỉnh tham số | ~12 phút |
 | 14 | `mining/10_metrics_summary.py` | Bảng đánh giá 7 khía cạnh, xếp hạng yếu tố ảnh hưởng | < 1 phút |
-| 15 | `report/make_diagrams.py` | Vẽ sơ đồ quy trình, trục thời gian | vài giây |
-| 16 | `report/build_report.py` | Dựng `report/report.docx` | vài giây |
+| 15 | `mining/11_clustering_variants.py` | So sánh 4 cách chọn đặc trưng cho phân cụm | ~5 phút |
+| 16 | `mining/12_ordering_sensitivity.py` | Độ nhạy của thứ tự giao dịch cùng ngày | < 1 phút |
+| 17 | `mining/13_drift_ablation.py` | Bỏ đặc trưng lệch theo lịch, đo lại | ~3 phút |
+| 18 | `report/make_diagrams.py` | Vẽ sơ đồ quy trình, trục thời gian | vài giây |
+| 19 | `report/build_report.py` | Dựng `report/report.docx` | vài giây |
 
 \* Đo trên laptop 16 GB RAM.
 
@@ -105,7 +108,7 @@ Remove-Item Env:DATA_DIR, Env:REPORT_DIR      # trả lại cài đặt bình th
 |---|---|---|
 | `CLUSTER_SAMPLE` | 200000 | Số khách dùng để chọn số cụm |
 | `CLUSTER_K` | tự chọn | Ép số cụm cố định |
-| `SIL_TOL`, `ARI_MIN`, `CLUSTER_BOOT` | 0.75, 0.8, 5 | Quy tắc chọn số cụm: silhouette ≥ SIL_TOL × tốt nhất và độ ổn định ≥ ARI_MIN; số lần bootstrap |
+| `SIL_TOL`, `ARI_MIN`, `CLUSTER_BOOT`, `K_MAX` | 0.75, 0.8, 5, 7 | Quy tắc chọn số cụm: k lớn nhất ≤ K_MAX có silhouette ≥ SIL_TOL × tốt nhất và độ ổn định ≥ ARI_MIN; số lần bootstrap |
 | `MIN_SUPPORT` | 0.01 | Ngưỡng support của luật kết hợp |
 | `SEQ_SAMPLE` | 300000 | Số khách dùng cho mẫu tuần tự |
 | `N_TRIALS` | 30 | Số lần thử khi tinh chỉnh tham số |

@@ -10,12 +10,12 @@ Final project môn Data Mining (DAM501): áp dụng quy trình Knowledge Discove
 
 | | Kết quả (cohort tháng 3/2017: 970.960 người dùng, churn 9,0%) |
 |---|---|
-| Phân cụm (K-Means 3 cụm + 1 nhóm quy tắc "không có nhật ký nghe"; silhouette 0,30, ARI 0,71) | Cấu trúc cụm vừa phải; nhóm rõ nhất là gói dài hạn trả thủ công (2,3% khách, 84% rời bỏ), các nhóm khác 6,6–9,2% |
-| Luật kết hợp (FP-Growth, kiểm định + FDR, kiểm chứng holdout, tương quan lift 0,999) | gói > 30 ngày → churn 83% (lift 9,2); tắt tự gia hạn → 42%; + ít nghe + kênh 9 → 55%; kênh 7 & mới < 1 năm → 2,2%; 5 luật đầu gắn cờ 6,6% khách, bao phủ 44% khách rời bỏ |
+| Phân cụm (K-Means 7 cụm trên 13 đặc trưng + 1 nhóm quy tắc "không có nhật ký nghe"; silhouette 0,21, ARI 0,996) | 8 nhóm, tỉ lệ rời bỏ từ 3,2% (trung thành, tự gia hạn – 36% khách) tới 22% (nghe nhiều nhưng trả thủ công) và 84% (gói dài hạn trả thủ công – 2,2%) |
+| Luật kết hợp (FP-Growth, kiểm định + FDR, kiểm chứng holdout, tương quan lift 0,999) | gói > 30 ngày → churn 83% (lift 9,2); tắt tự gia hạn → 42%; + ít nghe + kênh 9 → 55%; kênh 7 & mới < 1 năm → 2,2%; 5 luật đầu gắn cờ 5,1% khách, bao phủ 36% khách rời bỏ |
 | Mẫu tuần tự (PrefixSpan) | trả thủ công → gói dài → gói dài → 70% rời bỏ (lift 7,8); đổi gói thật → 33%; trả tự động liên tục → 4,9% |
 | Phân lớp (bổ trợ, train 02/2017 → test 03/2017) | LightGBM ROC-AUC 0,870, PR-AUC 0,60, top 10% bắt 61% người churn (lift 6,1) |
 | Leakage audit | dữ liệu tháng nhãn thổi phồng AUC thêm 0,05–0,07; hành vi nghe đơn lẻ chỉ đạt AUC 0,57 |
-| Độ ổn định (áp kết quả tháng 3 lên tháng 2) | nhóm khách giữ nguyên thứ tự rủi ro (fit lại ARI 0,98); 30/30 luật và 30/30 mẫu tuần tự giữ hướng |
+| Độ ổn định (áp kết quả tháng 3 lên tháng 2) | thứ tự rủi ro các nhóm gần như giữ nguyên (Spearman 0,88; phân cụm lại ARI 0,72); 33/34 luật và 30/30 mẫu tuần tự giữ hướng |
 | Hiệu chuẩn và giá trị kinh doanh | dự báo trung bình 6,4% so với thực tế 9,0%, EM không nhãn không sửa được; liên hệ 8–16% người rủi ro nhất cho giá trị ròng dương (giả định minh họa), chọn ngẫu nhiên thì lỗ |
 | Cải tiến mô hình (đặc trưng thanh toán + Optuna) | ROC-AUC 0,870 → 0,874 (+0,004), recall top 10% không đổi |
 | Đánh giá 7 khía cạnh | hợp lệ, chất lượng, độ tin cậy, phân biệt rủi ro, độ phủ, giá trị kinh doanh, khả năng giải thích (`report/metrics_summary.csv`) |
@@ -47,6 +47,7 @@ Kết luận: churn ở KKBox là **quyết định thanh toán** (tự gia hạ
 | PrefixSpan (bitmask NumPy) trên chuỗi giao dịch | `data_prep/02_build_sequences.py`, `mining/05_sequential.py` | mẫu tuần tự |
 | Leakage audit, so sánh thuật toán | `data_prep/03_build_leakage_audit.py`, `mining/06_validation.py` | đánh giá |
 | Khung đánh giá 7 khía cạnh, xếp hạng yếu tố, PSI, độ phủ luật | `mining/10_metrics_summary.py` | đánh giá |
+| Phân tích độ nhạy: cách chọn đặc trưng phân cụm, thứ tự giao dịch cùng ngày (Codex), bỏ đặc trưng lệch theo lịch | `mining/11_clustering_variants.py`, `mining/12_ordering_sensitivity.py`, `mining/13_drift_ablation.py` | đánh giá |
 | Độ ổn định theo thời gian (tháng 3 → tháng 2) | `mining/07_stability.py` | đánh giá |
 | Hiệu chỉnh xác suất (EM), đường lợi nhuận | `mining/08_business_value.py` | đánh giá, kinh doanh |
 | Thí nghiệm 2×2: đặc trưng thanh toán, Optuna | `mining/09_model_improvement.py` | cải tiến mô hình |

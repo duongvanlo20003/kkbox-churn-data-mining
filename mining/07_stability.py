@@ -36,11 +36,12 @@ N = int(os.environ.get("CLUSTER_SAMPLE", 200_000))
 model = joblib.load(DATA / "cluster_model.joblib")
 scaler, km, MED, names = model["scaler"], model["km"], model["median"], model["names"]
 NOLOG = model.get("nolog_id", km.n_clusters)
+CLF = model.get("features") or list(MED.index)
 K = km.n_clusters + 1          # K-Means clusters + the rule-based "no listening log" segment
 
 mar = load("mar").merge(pd.read_parquet(DATA / "clusters_mar.parquet")[["msno", "cluster"]], on="msno")
 feb = load("feb")
-feb["cluster"] = np.where(feb.has_logs == 1, km.predict(scaler.transform(prepare(feb).fillna(MED))), NOLOG)
+feb["cluster"] = np.where(feb.has_logs == 1, km.predict(scaler.transform(prepare(feb)[CLF].fillna(MED))), NOLOG)
 out = {"base_mar": mar.is_churn.mean(), "base_feb": feb.is_churn.mean(), "k": K}
 
 # ---- 1a. same segments, one month earlier ----------------------------------------------------
@@ -57,7 +58,7 @@ out["segment_share_max_abs_diff"] = float((seg.share_mar - seg.share_feb).abs().
 
 # ---- 1b. refit on feb: does the same structure re-emerge? ---------------------------------------
 fs = feb[feb.has_logs == 1].sample(min(N, int((feb.has_logs == 1).sum())), random_state=SEED)
-Rf = prepare(fs)
+Rf = prepare(fs)[CLF]
 med_f = Rf.median()
 sc_f = StandardScaler().fit(Rf.fillna(med_f))
 km_f = KMeans(km.n_clusters, n_init=10, random_state=SEED).fit(sc_f.transform(Rf.fillna(med_f)))

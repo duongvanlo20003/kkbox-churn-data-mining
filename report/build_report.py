@@ -274,14 +274,17 @@ P(f"Phân cụm được làm theo hai bước. Bước 1: {pct(eda.get('share_n
   "cố định (“60 ngày không nghe”) rồi đưa vào K-Means, và thuật toán chỉ tìm lại đúng nhóm đó: 99% khách của một cụm "
   "là khách không có nhật ký. Cụm như vậy là do cách gán giá trị tạo ra, không phải cấu trúc thật, nên được tách ra "
   "bằng quy tắc.")
-P(f"Bước 2: với {k(cl.get('n_loggers', 0))} khách có nhật ký, K-Means dùng 16 đặc trưng về thuê bao và nghe nhạc (đã "
-  f"lấy log và chuẩn hoá), trên mẫu {k(cl.get('n_users', 200000))} khách. Nhãn rời bỏ không được dùng ở bất kỳ bước "
-  "nào của phân cụm, kể cả khi chọn số cụm.")
-P(f"Số cụm được chọn chỉ dựa trên tiêu chí nội tại: lấy số cụm lớn nhất có silhouette ít nhất 75% điểm cao nhất và "
-  f"độ ổn định (ARI qua 5 lần chạy lại trên mẫu khác) ít nhất 0,8. Không có số cụm nào đạt cả hai điều kiện (Bảng "
-  f"{n_tab[0] + 1}): các lời giải 4–8 cụm có silhouette thấp (0,15–0,24) và kém ổn định, còn 9–10 cụm ổn định hơn "
-  f"nhưng silhouette chỉ khoảng 0,16. Vì vậy nhóm dùng lời giải có silhouette cao nhất: {cl.get('k')} cụm (silhouette "
-  f"{num(cl.get('silhouette'))}, ARI {num(cl.get('stability_ari'), 2)}).")
+P(f"Bước 2: với {k(cl.get('n_loggers', 0))} khách có nhật ký, K-Means dùng các đặc trưng về thuê bao và nghe nhạc (đã "
+  f"lấy log và chuẩn hoá), trên mẫu {k(cl.get('n_users', 200000))} khách. Trong 16 đặc trưng ban đầu, những đặc trưng gần "
+  f"như trùng nhau (tương quan trên 0,8) chỉ giữ lại một, nên bỏ {len(cl.get('dropped_redundant', []))} đặc trưng (tổng số "
+  "giờ nghe, tỉ lệ bỏ qua bài, độ thất thường), còn 13. Lý do: nếu giữ cả, chiều “mức độ nghe” bị tính nhiều lần và "
+  "lấn át thông tin thanh toán; mục 6.7 so sánh cách làm này với các cách khác. Nhãn rời bỏ không được dùng ở bất kỳ "
+  "bước nào của phân cụm, kể cả khi chọn số cụm.")
+P(f"Số cụm được chọn chỉ dựa trên tiêu chí nội tại (không dùng tỉ lệ rời bỏ): lấy số cụm lớn nhất, không quá "
+  f"{cl.get('k_max', 7)} (để tổng số nhóm không quá 8, còn dùng được trong thực tế), có silhouette ít nhất 75% điểm cao nhất "
+  f"và độ ổn định (ARI qua 5 lần chạy lại toàn bộ trên mẫu khác) ít nhất 0,8. Silhouette cao nhất là "
+  f"{num(cl.get('silhouette_macro'))} ở {cl.get('k_macro')} cụm; lời giải {cl.get('k')} cụm đạt cả hai điều kiện (silhouette "
+  f"{num(cl.get('silhouette'))}, ARI {num(cl.get('stability_ari'), 3)}) nên được chọn (Bảng {n_tab[0] + 1}).")
 q = csv("cluster_quality.csv")
 if len(q):
     t = q[["k", "silhouette", "davies_bouldin", "stability_ari", "min_cluster_share"]].copy()
@@ -301,8 +304,11 @@ P("Cách đọc các nhóm:")
 bullets(d, [f"{sname(c)}: {pct(seg.loc[c, 'share'], 0)} khách, tỉ lệ rời bỏ {pct(seg.loc[c, 'churn_rate'])}." for c in seg.index] + [
     "Nhóm gói dài hạn khác hẳn phần còn lại: độ dài gói và số tiền trả ở lần mua cuối cao hơn trung bình 4–6 độ lệch "
     "chuẩn, tỉ lệ tự gia hạn thấp hơn 2,2 độ lệch chuẩn, rất ít giao dịch.",
-    "Hai nhóm còn lại của K-Means khác nhau chủ yếu ở mức độ nghe, và tỉ lệ rời bỏ của chúng không chênh nhiều. Điều "
-    "này khớp với phần khám phá: thói quen nghe không phải yếu tố quyết định.",
+    "Nhóm “nghe nhiều nhưng trả thủ công” nghe nhiều hơn trung bình nhưng tỉ lệ rời bỏ gấp khoảng 2,5 lần mức chung; "
+    "nhóm “trung thành” cũng nghe nhiều nhưng tự gia hạn và chỉ rời bỏ khoảng 3%. Hai nhóm có thói quen nghe giống nhau, "
+    "khác nhau ở cách trả tiền, và rủi ro chênh nhau khoảng 7 lần.",
+    "Nhóm “mới hoặc quay lại” có thâm niên thấp, ít giao dịch và mức nghe tăng mạnh; tỉ lệ rời bỏ khoảng 17%. Nhóm "
+    "“nghe thưa, lâu chưa nghe” lại ít rời bỏ hơn mức chung, vì phần lớn vẫn tự gia hạn.",
 ])
 alg = csv("cluster_algorithms.csv")
 if len(alg):
@@ -311,12 +317,16 @@ if len(alg):
     a.columns = ["Thuật toán", "Số cụm", "Điểm bị coi là nhiễu", "Silhouette", "Giống K-Means (ARI)", "Chênh lệch tỉ lệ rời bỏ"]
     T(a, "So sánh bốn thuật toán phân cụm trên cùng 15.000 khách có nhật ký",
       fmt={"Điểm bị coi là nhiễu": "{:.0%}", "Silhouette": "{:.3f}", "Giống K-Means (ARI)": "{:.2f}", "Chênh lệch tỉ lệ rời bỏ": "{:.1%}"})
-P("Đánh giá: cấu trúc cụm của khách có nhật ký chỉ ở mức vừa phải (silhouette dưới 0,3; Davies–Bouldin 1,5). Phân "
-  "cụm phân cấp Ward tìm được cùng nhóm gói dài hạn và cùng mức chênh lệch rủi ro nhưng chia hai nhóm còn lại khác "
-  "K-Means (ARI 0,54), nghĩa là ranh giới giữa “nghe nhiều” và “ít nghe” không rõ. HDBSCAN coi 43% điểm là nhiễu. "
-  "Nhóm gói dài hạn là phát hiện chắc chắn nhất; các nhóm còn lại nên được hiểu như các mức độ của một dải liên tục "
-  "hơn là các nhóm tách biệt. Đây là kết luận trung thực sau khi bỏ cụm nhân tạo: phiên bản trước có 7 cụm, nhưng một "
-  "phần nhờ cụm nhân tạo và nhờ dùng tỉ lệ rời bỏ khi chọn số cụm.")
+alg_i = alg.set_index("algorithm") if len(alg) else None
+jac_s = jac.jaccard_mean.sort_values()
+weak = jac_s.index[0]
+P(f"Đánh giá: các cụm tách nhau ở mức vừa phải (silhouette {num(cl.get('silhouette'), 2)}, Davies–Bouldin "
+  f"{num(cl.get('davies_bouldin'), 2)}) nhưng rất ổn định khi chạy lại trên mẫu khác (ARI {num(cl.get('stability_ari'), 3)}). "
+  f"Phân cụm phân cấp Ward cho cách chia khá giống K-Means (ARI {num(alg_i.loc['Agglomerative (Ward)', 'ari_vs_kmeans'], 2)}) "
+  f"và cùng mức chênh lệch rủi ro; HDBSCAN chỉ tìm được {int(alg_i.loc['HDBSCAN', 'n_clusters'])} vùng dày đặc và coi "
+  f"{pct(alg_i.loc['HDBSCAN', 'noise_share'], 0)} điểm là nhiễu, nghĩa là khách hàng không tụ thành các đám tách biệt rõ. "
+  f"Xét từng cụm, cụm kém ổn định nhất là “{seg.loc[weak, 'name']}” (Jaccard {num(jac_s.iloc[0], 2)}), nên dùng thận trọng. "
+  "Các nhóm gói dài hạn, nghe nhiều nhưng trả thủ công, mới hoặc quay lại đều rất ổn định (Jaccard trên 0,9).")
 
 H("5.2 Luật kết hợp (FP-Growth)", 2)
 P(f"Mỗi khách được mô tả bằng một tập đặc điểm dạng có/không, ví dụ “tắt tự gia hạn”, “kênh đăng ký 9”, “ít ngày "
@@ -464,8 +474,10 @@ t.columns = ["Nhóm", "Đặc điểm", "Tỉ trọng T3", "Tỉ trọng T2", "R
 T(t, "Các nhóm khách hàng ở tháng 3 và tháng 2", fmt={c: "{:.1%}" for c in ["Tỉ trọng T3", "Tỉ trọng T2", "Rời bỏ T3", "Rời bỏ T2"]})
 FIG(F / "stability.png", "Trái: tỉ lệ rời bỏ của từng nhóm ở hai tháng. Phải: lift của các luật ở hai tháng (càng gần đường chéo càng ổn định)")
 bullets(d, [
-    "Nhóm khách hàng: tỉ trọng mỗi nhóm gần như không đổi và thứ tự rủi ro giữ nguyên hoàn toàn. Phân cụm lại từ đầu "
-    f"trên tháng 2 cũng ra gần đúng các nhóm cũ (ARI {num(st.get('ari_feb_refit_vs_mar_model'), 2)}).",
+    f"Nhóm khách hàng: tỉ trọng mỗi nhóm gần như không đổi và thứ tự rủi ro gần như giữ nguyên (tương quan Spearman "
+    f"của lift {num(st.get('segment_lift_spearman'), 2)}). Phân cụm lại từ đầu trên tháng 2 cho cách chia giống ở mức khá "
+    f"(ARI {num(st.get('ari_feb_refit_vs_mar_model'), 2)}): chia càng chi tiết thì ranh giới giữa các nhóm gần nhau càng dễ "
+    "dịch chuyển giữa các tháng (lời giải 3 nhóm lặp lại tốt hơn, ARI 0,98, nhưng kém hữu ích).",
     f"Luật kết hợp: {round(st.get('rule_share_same_direction', 0) * st.get('rules_checked', 0))} trên "
     f"{st.get('rules_checked')} luật vẫn gắn với mức rủi ro cao hoặc thấp như ở tháng 3 (tương quan log-lift "
     f"{num(st.get('rule_log_lift_pearson'), 2)}).",
@@ -531,18 +543,20 @@ P("Nhận xét tổng hợp:")
 bullets(d, [x for x in [
     "Tính hợp lệ: đạt. Không có thông tin sau mốc quan sát; các lỗi dữ liệu lớn đã được xử lý; mức thổi phồng của cách "
     "làm cũ đã được đo (0,05–0,07 ROC-AUC).",
-    f"Chất lượng kỹ thuật: mô hình dự báo, luật kết hợp và mẫu tuần tự đạt. Phân cụm chỉ đạt mức vừa phải (silhouette "
-    f"{num(cl.get('silhouette'), 2)}, Davies–Bouldin {num(cl.get('davies_bouldin'), 1)}): khách hàng không chia thành các nhóm tách biệt rõ.",
+    f"Chất lượng kỹ thuật: mô hình dự báo, luật kết hợp và mẫu tuần tự đạt. Phân cụm chỉ đạt mức vừa phải về độ tách "
+    f"(silhouette {num(cl.get('silhouette'), 2)}, Davies–Bouldin {num(cl.get('davies_bouldin'), 1)}): khách hàng không chia "
+    "thành các nhóm tách biệt rõ.",
     f"Độ tin cậy: luật kết hợp và mẫu tuần tự rất đáng tin (đúng trên dữ liệu giữ riêng và lặp lại ở tháng 2). Phân cụm "
-    f"ổn định ở mức vừa (ARI {num(cl.get('stability_ari'), 2)}); nhóm gói dài hạn là nhóm kém ổn định nhất khi lấy mẫu lại "
-    f"(Jaccard {num(cl.get('jaccard_min_cluster'), 2)}) vì nhóm này nhỏ, nhưng nó lặp lại rất rõ ở tháng 2.",
+    f"rất ổn định khi lấy mẫu lại (ARI {num(cl.get('stability_ari'), 2)}), trừ một cụm nhỏ (Jaccard "
+    f"{num(cl.get('jaccard_min_cluster'), 2)}); khi phân cụm lại trên tháng 2 thì độ giống chỉ ở mức khá "
+    f"(ARI {num(st.get('ari_feb_refit_vs_mar_model'), 2)}).",
     "Phân biệt rủi ro: đạt. Chênh lệch giữa nhóm rủi ro nhất và an toàn nhất rất lớn (lift khoảng 9 so với 0,25).",
     f"Độ phủ: 5 luật đơn giản bao phủ {pct(cov5.share_churners_covered, 0)} khách rời bỏ khi gắn cờ "
     f"{pct(cov5.share_users_flagged)} khách; mô hình bao phủ {pct(lg.get('recall@10%'), 0)} khi liên hệ 10% khách. Luật dễ "
-    "giải thích và kém mô hình không nhiều." if cov5 is not None else None,
+    "giải thích, nhưng độ phủ thấp hơn mô hình." if cov5 is not None else None,
     "Giá trị kinh doanh và vận hành: có lãi và hơn hẳn chọn ngẫu nhiên theo giả định, nhưng xác suất bị lệch (ECE "
     "0,026) và một số đặc trưng thay đổi giữa hai tháng, nên cần theo dõi khi vận hành.",
-    "Khả năng giải thích: đạt. 4 nhóm, luật trung bình 2 điều kiện, chuỗi khoảng 2–3 bước.",
+    f"Khả năng giải thích: đạt. {len(seg)} nhóm có tên nghiệp vụ, luật trung bình 2 điều kiện, chuỗi khoảng 2–3 bước.",
 ] if x])
 
 # ---- 6.5 factors -------------------------------------------------------------------------------
@@ -599,23 +613,28 @@ fact = [
     ("8. Số ngày từ giao dịch đầu tiên (cần thận trọng)",
      "Bằng chứng: nằm trong nhóm 5 yếu tố mạnh nhất theo SHAP nhưng thay đổi rất mạnh giữa hai tháng (PSI 0,86). Giải "
      "thích: dữ liệu giao dịch bắt đầu từ 01/2015, nên với khách lâu năm giá trị này chỉ là “số ngày kể từ khi dữ liệu "
-     "bắt đầu” và tăng đều theo lịch. Đây là một nguyên nhân khiến mô hình kém hơn khi chuyển sang tháng mới; khi triển "
-     "khai nên thay bằng thời gian sử dụng dịch vụ từ hồ sơ."),
+     "bắt đầu” và tăng đều theo lịch. Thí nghiệm ở mục 6.7 cho thấy bỏ đặc trưng này gần như không làm thay đổi kết quả, "
+     "nên nó không phải nguyên nhân chính khiến mô hình kém hơn ở tháng mới; dù vậy khi triển khai vẫn nên thay bằng "
+     "thời gian sử dụng dịch vụ từ hồ sơ để tránh lệch theo lịch."),
 ]
 for title, text in fact:
     para(d, title, bold=True)
     P(text)
-P("Tại sao kết quả ở tháng 3 kém hơn khi kiểm tra trong cùng tháng 2 (ROC-AUC giảm khoảng 0,03)? Dữ liệu gợi ý ba "
-  "khả năng, nhưng nhóm chưa làm thí nghiệm để tách riêng từng nguyên nhân: (1) mức rủi ro của từng nhóm khách thay đổi "
-  "giữa hai tháng (ví dụ nhóm gói dài hạn 48% so với 84%), tức quan hệ giữa đặc trưng và việc rời bỏ không hoàn toàn "
-  "giống nhau; (2) một số đặc trưng đổi phân bố theo lịch, rõ nhất là số ngày từ giao dịch đầu tiên (PSI 0,86); (3) "
-  "đánh giá trong cùng tháng thường lạc quan hơn đánh giá trên tháng sau. Riêng việc tỉ lệ rời bỏ tăng từ 6,4% lên "
-  "9,0% tự nó không làm giảm ROC-AUC, nhưng làm xác suất dự báo bị lệch (mục 6.3).")
+dab = csv("drift_ablation.csv")
+P("Tại sao kết quả ở tháng 3 kém hơn khi kiểm tra trong cùng tháng 2 (ROC-AUC giảm khoảng 0,03)? Nhóm đã kiểm tra "
+  "một giả thuyết: một số đặc trưng đổi phân bố theo lịch (rõ nhất là số ngày từ giao dịch đầu tiên, PSI 0,86). Bỏ "
+  f"các đặc trưng có PSI trên 0,1 chỉ làm khoảng chênh giảm từ {num(dab.gap.iloc[0])} xuống {num(dab.gap.iloc[-1])} (mục "
+  "6.7), tức thu hẹp được khoảng một phần mười. Như vậy các đặc trưng lệch theo lịch không phải nguyên nhân chính, "
+  "nhưng thí nghiệm này chưa xác định được nguyên nhân còn lại. Một khả năng là quan hệ giữa đặc trưng và việc rời bỏ "
+  "thay đổi giữa hai tháng (ví dụ nhóm gói dài hạn rời bỏ 48% ở tháng 2 nhưng 84% ở tháng 3); muốn khẳng định cần "
+  "dữ liệu nhiều tháng hơn. Riêng việc tỉ lệ rời bỏ tăng từ 6,4% lên 9,0% tự nó không làm giảm ROC-AUC, nhưng làm xác "
+  "suất dự báo bị lệch (mục 6.3).")
 
 H("6.6 So sánh các kỹ thuật", 2)
 comp = pd.DataFrame([
-    ("Phân cụm (K-Means)", f"silhouette {num(cl.get('silhouette'), 2)}, ổn định vừa (ARI {num(cl.get('stability_ari'), 2)})",
-     "Cao", "Lặp lại ở tháng 2, thứ tự rủi ro giữ nguyên", "Chia ngân sách, thiết kế chương trình theo nhóm lớn"),
+    ("Phân cụm (K-Means)", f"silhouette {num(cl.get('silhouette'), 2)}, ổn định khi lấy mẫu lại (ARI {num(cl.get('stability_ari'), 2)})",
+     "Cao", f"Thứ tự rủi ro gần như giữ nguyên; phân cụm lại ở tháng 2 giống ở mức khá (ARI {num(st.get('ari_feb_refit_vs_mar_model'), 2)})",
+     "Chia ngân sách, thiết kế chương trình theo nhóm"),
     ("Luật kết hợp (FP-Growth)", f"{ru.get('n_churn_rules')} luật, kiểm tra lại gần như khớp; 5 luật bao phủ "
      f"{pct(cov5.share_churners_covered, 0) if cov5 is not None else '–'} khách rời bỏ",
      "Rất cao (nếu… thì…)", f"{pct(st.get('rule_share_same_direction'), 0)} giữ ý nghĩa", "Đặt điều kiện kích hoạt hành động"),
@@ -632,13 +651,70 @@ P("Bốn kỹ thuật đi đến cùng một kết luận: nhóm mua gói dài h
   "thích và nhạy với thay đổi giữa các tháng. Toàn bộ quy trình chạy trên một máy tính cá nhân 16 GB RAM trong khoảng "
   "50 phút.")
 
+H("6.7 Phân tích độ nhạy: kết quả có phụ thuộc vào các lựa chọn của nhóm không?", 2)
+P("Ba lựa chọn của nhóm có thể ảnh hưởng tới kết quả: cách chọn đặc trưng cho phân cụm, quy tắc sắp xếp các giao dịch "
+  "cùng ngày, và việc giữ các đặc trưng có phân bố thay đổi theo lịch. Mỗi lựa chọn được thử lại theo cách khác.")
+para(d, "a) Các cách chọn đặc trưng cho phân cụm", bold=True)
+cv_ = csv("cluster_variants.csv")
+if len(cv_):
+    t = cv_[["variant", "k", "silhouette", "stability_ari", "churn_spread", "ari_vs_A"]].copy()
+    t.columns = ["Cách làm", "Số cụm chọn được", "Silhouette", "Độ ổn định (ARI)", "Chênh lệch tỉ lệ rời bỏ", "Giống cách A (ARI)"]
+    T(t, "So sánh 4 cách chọn đặc trưng (mẫu 100.000 khách có nhật ký, cùng quy tắc chọn số cụm, chưa giới hạn tối đa 7)",
+      fmt={"Silhouette": "{:.3f}", "Độ ổn định (ARI)": "{:.2f}", "Chênh lệch tỉ lệ rời bỏ": "{:.1%}", "Giống cách A (ARI)": "{:.2f}"})
+    FIG(F / "cluster_variants.png", "Silhouette và độ ổn định theo số cụm của 4 cách chọn đặc trưng")
+    P("Khi dùng đủ 16 đặc trưng với trọng số bằng nhau (cách A), nhóm thông tin nghe nhạc (8 đặc trưng) lấn át; lời "
+      "giải được chọn chỉ có 3 cụm, rất ổn định nhưng chênh lệch rủi ro giữa các cụm nhỏ hơn nhiều (khoảng 32 điểm phần "
+      "trăm). Khi cân bằng các nhóm đặc trưng (B) hoặc bỏ đặc trưng trùng (C), K-Means tách được nhóm gói dài hạn và nhóm "
+      "trả thủ công, chênh lệch rủi ro tăng lên khoảng 77 điểm phần trăm, đổi lại độ ổn định thấp hơn A. Thêm kênh đăng "
+      "ký và phương thức thanh toán (D) cho nhiều cụm hơn nhưng kém tách và kém ổn định nhất.")
+    P("Cần nói rõ: nhóm chọn cách C cho phân cụm chính sau khi đã xem kết quả của phần thử nghiệm này. Lý do là cách C "
+      "loại bỏ trùng lặp giữa các đặc trưng (một nguyên tắc chung khi phân cụm) và vẫn ổn định khi lấy mẫu lại, nhưng "
+      "đây vẫn là lựa chọn sau quan sát, nên báo cáo trình bày đủ cả bốn cách. Lựa chọn này cũng phụ thuộc vào mẫu: trên "
+      "mẫu 100.000 khách của bảng trên, cách C với 7 cụm chỉ có ARI 0,75, trong khi trên mẫu chính 200.000 khách là "
+      "0,996. Các cách cho kết quả khá khác nhau (ARI so với A chỉ 0,2–0,3), nên cách chia nhóm phụ thuộc đáng kể vào "
+      "việc chọn đặc trưng và chưa được xác nhận trên dữ liệu độc lập.")
+para(d, "b) Quy tắc sắp xếp các giao dịch cùng ngày (Codex thực hiện)", bold=True)
+osj = j("ordering_sensitivity").get("mar", {})
+osc = csv("ordering_sensitivity.csv")
+if osj:
+    om = osc[(osc.cohort == "mar") & osc.metric.isin(["n_users_last_is_cancel_1", "churn_rate_last_is_cancel_1",
+                                                       "churn_rate_last_auto_renew_0", "churn_rate_last_auto_renew_1"])]
+    t = om.pivot(index="rule", columns="metric", values="value").reset_index()
+    t = t[["rule", "n_users_last_is_cancel_1", "churn_rate_last_is_cancel_1", "churn_rate_last_auto_renew_0", "churn_rate_last_auto_renew_1"]]
+    t["rule"] = t.rule.map({"standard": "Chuẩn (đang dùng)", "cancel_first": "Hủy được coi là trước",
+                            "expiry_desc": "Ngày hết hạn giảm dần", "paid_desc": "Số tiền giảm dần"}).fillna(t.rule)
+    t.columns = ["Quy tắc", "Số khách có giao dịch cuối là hủy", "Rời bỏ khi giao dịch cuối là hủy",
+                 "Rời bỏ khi tắt tự gia hạn", "Rời bỏ khi bật tự gia hạn"]
+    T(t, "Ảnh hưởng của quy tắc sắp xếp giao dịch cùng ngày (tháng 3)",
+      fmt={"Số khách có giao dịch cuối là hủy": "{:,.0f}", "Rời bỏ khi giao dịch cuối là hủy": "{:.1%}",
+           "Rời bỏ khi tắt tự gia hạn": "{:.1%}", "Rời bỏ khi bật tự gia hạn": "{:.1%}"})
+    P(f"Chỉ {pct(osj.get('share_users_with_same_day_ties'))} khách có nhiều giao dịch cùng ngày ở lần giao dịch cuối, và "
+      "mỗi thông tin của giao dịch cuối thay đổi ở tối đa 1,3% khách. Kết quả về tự gia hạn gần như không đổi. Riêng "
+      "tỉ lệ rời bỏ của nhóm “giao dịch cuối là hủy” dao động mạnh (từ khoảng 55% đến 85%) vì nhóm này nhỏ: với quy tắc "
+      "“ngày hết hạn giảm dần”, nhóm này tăng thêm khoảng 7.900 khách có giao dịch hủy và giao dịch khác cùng ngày, "
+      "nhiều khả năng là hủy gói cũ rồi mua gói mới (đổi gói), và phần lớn họ ở lại. Quy tắc chuẩn coi lần mua mới là trạng thái cuối, hợp lý hơn về "
+      "nghiệp vụ. Vì vậy con số 83% chỉ nên đọc là “rất cao”, chiều liên hệ không đổi nhưng độ lớn phụ thuộc quy tắc.")
+para(d, "c) Bỏ các đặc trưng thay đổi theo lịch", bold=True)
+dab = csv("drift_ablation.csv")
+if len(dab):
+    t = dab[["feature_set", "auc_in_month", "auc_out_of_time", "gap"]].copy()
+    t.columns = ["Đặc trưng dùng", "ROC-AUC trong tháng 2", "ROC-AUC trên tháng 3", "Chênh lệch"]
+    T(t, "Bỏ đặc trưng có PSI > 0,1: khoảng chênh giữa hai cách đánh giá có giảm không?",
+      fmt={"ROC-AUC trong tháng 2": "{:.4f}", "ROC-AUC trên tháng 3": "{:.4f}", "Chênh lệch": "{:.4f}"})
+    P(f"Bỏ hai đặc trưng thay đổi theo lịch chỉ làm khoảng chênh giảm từ {num(dab.gap.iloc[0])} xuống "
+      f"{num(dab.gap.iloc[-1])} và ROC-AUC trên tháng 3 gần như không đổi (tăng {num(dab.oot_delta_vs_all.iloc[-1], 4)}). "
+      "Các đặc trưng lệch theo lịch vì vậy chỉ giải thích một phần nhỏ khoảng chênh; nguyên nhân còn lại chưa xác định "
+      "được với hai tháng dữ liệu.")
+
 # =============================================================================================
 H("7. Gợi ý cho doanh nghiệp", 1)
 P("Các gợi ý dưới đây dựa trên mối liên hệ tìm được trong dữ liệu. Trước khi áp dụng rộng, mỗi gợi ý nên được thử "
   "nghiệm có nhóm đối chứng (A/B test).")
 bullets(d, [
     f"Khuyến khích bật tự gia hạn. Khách tắt tự gia hạn rời đi {pct(g('auto_renew', 'off'), 0)}, khách bật chỉ "
-    f"{pct(g('auto_renew', 'on'))}. Nên ưu tiên khách tắt tự gia hạn nhưng vẫn nghe nhiều, ví dụ tặng ưu đãi nhỏ khi bật lại.",
+    f"{pct(g('auto_renew', 'on'))}. Nên thử trước với nhóm “nghe nhiều nhưng trả thủ công” (khoảng "
+    f"{k(seg.n[seg.name.str.startswith('Nghe nhiều nhưng')].sum() / 1000)} nghìn khách, rời bỏ "
+    f"{pct(seg.churn_rate[seg.name.str.startswith('Nghe nhiều nhưng')].mean(), 0)}), ví dụ tặng ưu đãi nhỏ khi bật tự gia hạn.",
     f"Chăm sóc riêng khách mua gói dài hạn ({k(seg.loc[risk_seg, 'n'] / 1000)} nghìn khách, rời bỏ "
     f"{pct(seg.loc[risk_seg, 'churn_rate'], 0)}). Có thể nhắc gia hạn trước ngày hết hạn kèm ưu đãi, hoặc mời chuyển sang "
     "gói tháng tự gia hạn. Nếu vẫn không cải thiện, nên xem lại hiệu quả của loại gói này.",
@@ -696,8 +772,8 @@ P("Với PCA, ba thành phần chính đầu tiên giải thích khoảng 67% t�
 H("9. Kết luận, hạn chế và hướng phát triển", 1)
 P("Kết luận: ở KKBox, rủi ro khách rời bỏ gắn chặt nhất với cách khách trả tiền (tự gia hạn hay trả tay, gói tháng hay "
   "gói dài), còn thói quen nghe nhạc chỉ bổ sung. Bốn kỹ thuật cho kết quả nhất quán; luật kết hợp và mẫu tuần tự đều "
-  "đúng trên dữ liệu giữ riêng và lặp lại ở tháng 2. Phân cụm cho cấu trúc vừa phải, trong đó nhóm gói dài hạn là phát "
-  "hiện rõ nhất.")
+  "đúng trên dữ liệu giữ riêng và lặp lại ở tháng 2. Phân cụm cho 7 nhóm có ý nghĩa và ổn định khi lấy mẫu lại, dù các "
+  "nhóm không tách nhau rõ và cách chia phụ thuộc vào việc chọn đặc trưng; nhóm gói dài hạn là phát hiện rõ nhất.")
 P(f"Về phương pháp, đồ án phát hiện và đo được lỗi rò rỉ dữ liệu của phiên bản trước (trên cùng phép chia, ROC-AUC "
   f"tăng ảo từ {num(clean_auc)} lên {num(audit.get('v1 recipe (unfiltered *_v2 files)', {}).get('roc_auc'))}; khi kiểm tra đúng "
   f"cách trên tháng sau, mô hình sạch đạt {num(lg.get('roc_auc'))}), phát hiện và sửa các bản ghi lỗi (gói 0 ngày, ngày "
@@ -707,7 +783,7 @@ bullets(d, [
     "Danh sách khách mỗi tháng do KKBox chọn sẵn; chỉ có hai tháng có nhãn.",
     "Không có dữ liệu về lý do khách tắt tự gia hạn, giá của đối thủ hay khiếu nại; mã phương thức thanh toán không có tên.",
     "Các luật và nhóm khách cho thấy mối liên hệ, chưa chứng minh nguyên nhân.",
-    "Cấu trúc cụm của khách có nhật ký nghe chỉ ở mức vừa phải.",
+    "Các cụm chỉ tách nhau ở mức vừa phải; cách chia phụ thuộc vào việc chọn đặc trưng và lặp lại ở tháng khác chỉ ở mức khá.",
     "Tuổi và giới tính thiếu nhiều; một số đặc trưng bị giới hạn bởi ngày bắt đầu của dữ liệu.",
     "Xác suất dự báo bị lệch khi tỉ lệ rời bỏ thay đổi; giá trị kinh doanh dựa trên giả định.",
     "Các giải thích ở mục 6.5 là giả thuyết; chưa đo được thời gian từ tín hiệu cảnh báo đến ngày hết hạn, và chưa có "

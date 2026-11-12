@@ -15,13 +15,14 @@ Ký hiệu trạng thái: **Đạt** – ổn ở mức thạc sĩ · **Đã s�
 | 3. Dữ liệu lớn | Đọc file nhật ký 28 GB theo luồng | Máy không đủ ổ đĩa để giải nén | 392 triệu dòng → 40,9 triệu dòng cần dùng, 13 phút |
 | 4. Khai phá | Phân cụm, luật kết hợp, mẫu tuần tự (Codex), phân lớp, phát hiện bất thường | Đề yêu cầu ≥ 2 kỹ thuật, ≥ 1 không giám sát | Luật "gói > 30 ngày → 83%"; chuỗi "trả thủ công → gói dài → gói dài → 70%" |
 | 5. Kiểm chứng | Holdout 30%, kiểm định + FDR, bootstrap, đo rò rỉ | Tránh mẫu ngẫu nhiên, đo mức thổi phồng | Lift train/holdout tương quan 0,999; rò rỉ thổi AUC thêm 0,05–0,07 |
-| 6. Ổn định theo thời gian | Áp kết quả tháng 3 lên tháng 2 | Mẫu thật phải lặp lại | 30/30 luật, 30/30 chuỗi giữ ý nghĩa; thứ tự rủi ro các nhóm giữ nguyên |
+| 6. Ổn định theo thời gian | Áp kết quả tháng 3 lên tháng 2 | Mẫu thật phải lặp lại | 33/34 luật, 30/30 chuỗi giữ ý nghĩa; thứ tự rủi ro các nhóm gần như giữ nguyên |
 | 7. Giá trị kinh doanh | Hiệu chỉnh xác suất (EM), đường lợi nhuận | Nối kết quả với quyết định | Nên liên hệ 8–15% khách rủi ro nhất; EM không sửa được lệch xác suất |
 | 8. Cải thiện mô hình | 13 đặc trưng thanh toán + Optuna | Thử nâng độ chính xác | +0,004 ROC-AUC, không đổi ở top 10% |
 | 9. Trình bày | Viết lại lời văn, sơ đồ, thuật ngữ, Việt hoá | Báo cáo dễ đọc | Có sơ đồ quy trình, trục thời gian, bảng thuật ngữ |
 | 10. Rà soát phương pháp | Kiểm tra lại dữ liệu và phương pháp | Tự đánh giá trước khi nộp | Phát hiện lỗi gói 0 ngày, cụm nhân tạo, chọn k có dùng nhãn (mục B, C) |
 | 11. Sửa và chạy lại | Sửa toàn bộ vấn đề "Cần sửa" của vòng 10, chạy lại trên dữ liệu thật | Kết quả phải dựa trên dữ liệu sạch và phương pháp đúng | Phân cụm còn 3 cụm + 1 nhóm quy tắc (thay vì 7); tín hiệu "đổi gói" yếu đi nhưng vẫn rõ; kết luận chính giữ nguyên |
 | 12. Khung đánh giá | Đánh giá theo 7 khía cạnh của bài toán; xếp hạng và giải thích các yếu tố ảnh hưởng | Đánh giá phải trả lời "bài toán giải quyết tốt đến đâu" | Thêm độ phủ khách rời bỏ của luật, PSI (độ thay đổi giữa tháng), độ dài luật; phát hiện đặc trưng "số ngày từ giao dịch đầu" bị lệch theo lịch (PSI 0,86) |
+| 13. Phân tích độ nhạy | Thử 4 cách chọn đặc trưng cho phân cụm; thử 4 quy tắc sắp xếp giao dịch cùng ngày (Codex); bỏ đặc trưng lệch theo lịch | Kiểm tra kết quả có phụ thuộc vào lựa chọn của nhóm không | Bỏ 3 đặc trưng trùng → 7 cụm ổn định khi lấy mẫu lại (ARI 0,996 trên mẫu chính) thay cho 3 cụm; lựa chọn này được làm sau khi xem kết quả và phụ thuộc vào mẫu (ARI 0,75 trên mẫu 100.000); thứ tự cùng ngày chỉ ảnh hưởng 1,3% khách nhưng làm tỉ lệ rời bỏ của nhóm "hủy" dao động 55–85%; bỏ đặc trưng lệch theo lịch chỉ thu hẹp khoảng 1/10 khoảng chênh AUC |
 
 Chi tiết thay đổi từng file: [THAY_DOI.md](THAY_DOI.md).
 
@@ -51,10 +52,10 @@ Chi tiết thay đổi từng file: [THAY_DOI.md](THAY_DOI.md).
 | 2 | **Ngày hết hạn hỏng**: 7.271 giao dịch có ngày hết hạn trước 2015 | Trung bình | Chuyển thành thiếu; giao dịch có hạn trước ngày giao dịch (73.980, phần lớn là hủy) được giữ | **Đã sửa** |
 | 3 | **Ngày đăng ký sau mốc quan sát**: 1.057 khách (tháng 3) | Trung bình | Thâm niên chuyển thành thiếu | **Đã sửa** |
 | 4 | **Thành phố 1**: 51% khách, 97% không khai giới tính → có thể là mã "không rõ" | Thấp | Ghi chú khi diễn giải; không dùng thành phố để kết luận | **Còn hạn chế** |
-| 5 | **Thứ tự giao dịch cùng ngày** chỉ là quy ước | Thấp | – | **Nên bổ sung** kiểm tra độ nhạy |
+| 5 | **Thứ tự giao dịch cùng ngày** chỉ là quy ước | Thấp | Codex thử 3 quy tắc khác (vòng 13): chỉ 1,3% khách bị ảnh hưởng; kết quả về tự gia hạn không đổi; tỉ lệ rời bỏ của nhóm "giao dịch cuối là hủy" dao động 55–85% | **Đã kiểm tra** (ghi rõ trong báo cáo) |
 | 6 | **11% khách không có hồ sơ** | Thấp | Thêm cờ `has_member` | **Đã sửa** |
 | 7 | Ngưỡng tuổi 10–80, chặn `days_to_expire` chưa giải thích | Thấp | Bảng "lỗi dữ liệu và cách xử lý" trong báo cáo (mục 3.1) | **Đã sửa** |
-| 8 | **Đặc trưng "số ngày từ giao dịch đầu" bị giới hạn bởi ngày bắt đầu dữ liệu (01/2015)**, thay đổi mạnh giữa 2 tháng (PSI 0,86) – phát hiện ở vòng 12 | Trung bình | Giải thích trong báo cáo (mục 6.5); khuyến nghị thay bằng thâm niên khi triển khai | **Còn hạn chế** |
+| 8 | **Đặc trưng "số ngày từ giao dịch đầu" bị giới hạn bởi ngày bắt đầu dữ liệu (01/2015)**, thay đổi mạnh giữa 2 tháng (PSI 0,86) – phát hiện ở vòng 12 | Trung bình | Thí nghiệm bỏ đặc trưng (vòng 13): khoảng chênh AUC chỉ giảm 0,031 → 0,028, nên đây không phải nguyên nhân chính; nguyên nhân còn lại chưa xác định | **Đã kiểm tra** |
 
 ---
 
@@ -76,23 +77,23 @@ Chi tiết thay đổi từng file: [THAY_DOI.md](THAY_DOI.md).
 | 1 | Cụm nhân tạo từ khách không có nhật ký (99% một cụm) | Cao | Tách theo quy tắc; K-Means chỉ chạy trên khách có nhật ký | **Đã sửa** |
 | 2 | Lý do chọn k có dùng tỉ lệ rời bỏ | Cao | Chọn k chỉ bằng silhouette + độ ổn định | **Đã sửa** |
 | 3 | Quy tắc "75% silhouette" là quy ước | Trung bình | Thêm điều kiện ổn định ARI ≥ 0,8; ghi rõ là quy ước. Không k nào đạt cả hai → dùng k có silhouette cao nhất | **Đã sửa** (minh bạch) |
-| 4 | Biến nghe nhạc trùng nhau làm chiều "mức độ nghe" bị tính nhiều lần | Trung bình | – | **Nên bổ sung**: trọng số theo nhóm biến |
+| 4 | Biến nghe nhạc trùng nhau làm chiều "mức độ nghe" bị tính nhiều lần | Trung bình | Thử 4 cách (vòng 13); chọn cách bỏ biến trùng (tương quan > 0,8) cho phân cụm chính sau khi xem kết quả, báo cáo đủ 4 cách | **Đã sửa** (lựa chọn sau quan sát, ghi rõ) |
 | 5 | Chưa đo ổn định từng cụm | Trung bình | Thêm Jaccard từng cụm | **Đã sửa** |
-| 6 | Bỏ biến phân loại khỏi phân cụm | Thấp | Dùng để mô tả sau phân cụm | **Còn hạn chế** (có thể thử k-prototypes) |
+| 6 | Bỏ biến phân loại khỏi phân cụm | Thấp | Đã thử thêm kênh đăng ký và phương thức thanh toán (cách D): kém tách và kém ổn định hơn | **Đã kiểm tra** |
 | 7 | So sánh thuật toán chưa tinh chỉnh tham số | Thấp | Ghi rõ là thiết lập mặc định | **Còn hạn chế** |
 | 8 | Bảng nhiệt dùng z-score thang gốc | Thấp | Dùng tâm cụm trong không gian chuẩn hoá | **Đã sửa** |
 
-### C3. Kết quả sau khi sửa (trung thực)
+### C3. Kết quả qua các vòng (trung thực)
 
-| Chỉ số | Trước sửa (7 cụm) | Sau sửa (3 cụm + 1 nhóm quy tắc) |
-|---|---|---|
-| Silhouette | 0,273 | 0,297 |
-| Độ ổn định ARI | 0,88 (gồm cụm nhân tạo) | 0,71 |
-| Cụm kém ổn định nhất (Jaccard) | chưa đo | 0,68 (nhóm gói dài hạn, vì nhóm nhỏ) |
-| Lặp lại ở tháng 2 (ARI fit lại) | 0,98 | 0,98 |
-| Chênh lệch tỉ lệ rời bỏ | 3,3% – 84% | 6,6% – 84% |
+| Chỉ số | Vòng 4 (7 cụm, có cụm nhân tạo) | Vòng 11 (16 đặc trưng, 3 cụm + 1 nhóm quy tắc) | Vòng 13 – bản cuối (13 đặc trưng, 7 cụm + 1 nhóm quy tắc) |
+|---|---|---|---|
+| Silhouette | 0,273 | 0,297 | 0,212 |
+| Độ ổn định ARI (lấy mẫu lại) | 0,88 | 0,71 | 0,996 |
+| Cụm kém ổn định nhất (Jaccard) | chưa đo | 0,68 | 0,47 (cụm "hay được giảm giá") |
+| Phân cụm lại ở tháng 2 (ARI) | 0,98 | 0,98 | 0,72 |
+| Chênh lệch tỉ lệ rời bỏ | 3,3% – 84% | 6,6% – 84% | 3,2% – 84% |
 
-Sau khi bỏ cụm nhân tạo, **khách có nhật ký nghe không có cấu trúc cụm rõ**: lời giải 4–8 cụm có silhouette 0,15–0,24 và kém ổn định. Phát hiện chắc chắn nhất của phân cụm là nhóm gói dài hạn trả thủ công (2,3% khách, 84% rời bỏ). Các phân nhóm chi tiết hơn (ví dụ "nghe nhiều nhưng trả thủ công") được luật kết hợp và mẫu tuần tự tìm ra với độ tin cậy cao hơn.
+Bản cuối dùng 13 đặc trưng (bỏ 3 đặc trưng trùng), tìm ra 7 nhóm có ý nghĩa nghiệp vụ, trong đó có nhóm "nghe nhiều nhưng trả thủ công" (8,3% khách, 22% rời bỏ) mà bản 3 cụm không thấy. Đánh đổi: các nhóm chỉ tách nhau vừa phải (silhouette 0,21), một cụm nhỏ kém ổn định, và phân cụm lại ở tháng 2 chỉ giống ở mức khá (0,72). Cả ba điểm đều ghi rõ trong báo cáo.
 
 ---
 
@@ -103,12 +104,12 @@ File `mining/10_metrics_summary.py` → `report/metrics_summary.csv`, trình bà
 | Khía cạnh | Câu hỏi | Kết luận tóm tắt |
 |---|---|---|
 | 1. Tính hợp lệ | Có dùng nhầm thông tin tương lai, dữ liệu lỗi không? | **Đạt**: không có giao dịch sau mốc; lỗi đã xử lý; đo được mức thổi phồng 0,05–0,07 |
-| 2. Chất lượng kỹ thuật | Từng kỹ thuật tự nó có tốt không? | Mô hình (ROC-AUC 0,870, PR-AUC 0,603), luật, chuỗi **đạt**; phân cụm **vừa phải** (silhouette 0,30, DB 1,49) |
-| 3. Độ tin cậy | Có giữ trên dữ liệu chưa thấy và tháng khác? | Luật (r 0,999, 100% giữ hướng), chuỗi (100%) **đạt**; phân cụm **vừa** (ARI 0,71, Jaccard 0,68) |
+| 2. Chất lượng kỹ thuật | Từng kỹ thuật tự nó có tốt không? | Mô hình (ROC-AUC 0,870, PR-AUC 0,603), luật, chuỗi **đạt**; phân cụm **vừa phải** (silhouette 0,21, DB 1,36) |
+| 3. Độ tin cậy | Có giữ trên dữ liệu chưa thấy và tháng khác? | Luật (r 0,999, 33/34 giữ hướng), chuỗi (100%) **đạt**; phân cụm ổn định khi lấy mẫu lại (ARI 0,996) nhưng một cụm nhỏ kém ổn định (Jaccard 0,47) và phân cụm lại ở tháng 2 chỉ giống ở mức khá (ARI 0,72) |
 | 4. Phân biệt rủi ro | Có tách được khách rủi ro cao và thấp? | **Đạt**: lift 9,3 so với 0,25; lift top 10% = 6,1 |
-| 5. Độ phủ | Phát hiện bao trùm bao nhiêu phần vấn đề? | 5 luật gắn cờ 6,6% khách, bao phủ 44% khách rời bỏ; mô hình 10% khách → 61% |
+| 5. Độ phủ | Phát hiện bao trùm bao nhiêu phần vấn đề? | 5 luật gắn cờ 5,1% khách, bao phủ 36% khách rời bỏ; mô hình 10% khách → 61% |
 | 6. Kinh doanh và vận hành | Áp dụng thật có lợi và bền không? | Có lãi theo giả định; **chưa đạt** về hiệu chuẩn (ECE 0,026); 2 đặc trưng thay đổi đáng kể giữa tháng |
-| 7. Khả năng giải thích | Người làm kinh doanh có dùng được? | **Đạt**: 4 nhóm; luật trung bình 2 điều kiện; chuỗi 2–3 bước |
+| 7. Khả năng giải thích | Người làm kinh doanh có dùng được? | **Đạt**: 8 nhóm có tên nghiệp vụ; luật trung bình 2 điều kiện; chuỗi 2–3 bước |
 
 Các yếu tố ảnh hưởng (mục 6.5 báo cáo, `report/factor_summary.csv`): tự gia hạn > hủy ở giao dịch cuối > độ dài gói và số tiền trả > phương thức thanh toán > mức giao dịch gần đây và thời hạn còn lại > kênh đăng ký > thói quen nghe (yếu). Mỗi yếu tố có bằng chứng từ nhiều kỹ thuật và một giải thích nghiệp vụ, kèm lưu ý đây là liên hệ, chưa phải nhân quả.
 
@@ -116,10 +117,10 @@ Các yếu tố ảnh hưởng (mục 6.5 báo cáo, `report/factor_summary.csv`
 
 ## Phần E. Kết luận đánh giá
 
-**Đồ án đạt mức thạc sĩ**: quy trình KDD rõ ràng; chống rò rỉ dữ liệu và làm sạch có kiểm chứng; bốn kỹ thuật khai phá bổ trợ nhau; đánh giá theo câu hỏi của bài toán (7 khía cạnh) chứ không chỉ liệt kê chỉ số; kiểm chứng trên dữ liệu giữ riêng và tháng khác; có giá trị kinh doanh và tái lập được.
+**Theo đánh giá của nhóm, đồ án đáp ứng đầy đủ các yêu cầu của đề**: quy trình KDD rõ ràng; chống rò rỉ dữ liệu và làm sạch có kiểm chứng; bốn kỹ thuật khai phá bổ trợ nhau; đánh giá theo câu hỏi của bài toán (7 khía cạnh) chứ không chỉ liệt kê chỉ số; kiểm chứng trên dữ liệu giữ riêng và tháng khác; có giá trị kinh doanh và tái lập được.
 
 **Kết luận chính không đổi sau khi sửa**: rủi ro rời bỏ gắn với cách khách trả tiền (tự gia hạn, gói dài trả thủ công), thói quen nghe chỉ bổ sung.
 
-**Giới hạn đã nêu rõ trong báo cáo**: cấu trúc cụm của khách có nhật ký chỉ ở mức vừa; xác suất dự báo lệch khi tỉ lệ rời bỏ thay đổi; chỉ có 2 tháng có nhãn; quan hệ tìm được là liên hệ, chưa phải nhân quả.
+**Giới hạn đã nêu rõ trong báo cáo**: các cụm chỉ tách nhau vừa phải, cách chia phụ thuộc việc chọn đặc trưng (lựa chọn sau quan sát) và lặp lại ở tháng khác chỉ ở mức khá; xác suất dự báo lệch khi tỉ lệ rời bỏ thay đổi; chỉ có 2 tháng có nhãn; quan hệ tìm được là liên hệ, chưa phải nhân quả.
 
-**Nên bổ sung nếu còn thời gian**: phân cụm có trọng số theo nhóm biến hoặc k-prototypes; kiểm tra độ nhạy của thứ tự giao dịch cùng ngày; thay "số ngày từ giao dịch đầu" bằng thâm niên rồi đo lại độ thay đổi giữa tháng.
+**Các mục "nên bổ sung" đã làm ở vòng 13** (mục 6.7 báo cáo): so sánh 4 cách chọn đặc trưng cho phân cụm, kiểm tra độ nhạy của thứ tự giao dịch cùng ngày, và thí nghiệm bỏ đặc trưng lệch theo lịch. Còn lại cho hướng phát triển: kiểm tra trên nhiều tháng hơn, thử nghiệm A/B, đo thời gian từ tín hiệu cảnh báo đến ngày hết hạn.

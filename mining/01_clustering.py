@@ -4,13 +4,14 @@ Two-stage design:
   * Users with no listening log in the 60-day window (about 19 %) form a rule-based segment.
     Giving them constant "inactive" values and letting K-Means find them produced an artificial
     cluster (it only rediscovered the has_logs flag), so they are separated explicitly.
-  * K-Means is fitted on users WITH logs only: 16 subscription + listening features, log1p for
+  * K-Means is fitted on users WITH logs only: subscription + listening features (redundant ones
+    with |Spearman| > 0.8 dropped, 13 of 16 kept on the real data), log1p for
     heavy tails, median imputation, standardisation. The churn label is never used to fit or to
     choose the model.
 
 Choice of k uses internal criteria only:
   * macro k  = best silhouette (clusters >= 2 % of users);
-  * chosen k = the largest k whose silhouette is >= SIL_TOL x best AND whose bootstrap stability
+  * chosen k = the largest k (<= K_MAX = 7, so at most 8 segments in total) whose silhouette is >= SIL_TOL x best AND whose bootstrap stability
     (mean ARI over B refits of the whole pipeline) is >= ARI_MIN, clusters >= 2 % of users.
 Stability: ARI per k, ARI and per-cluster Jaccard for the chosen k. Alternatives (Ward, GMM,
 HDBSCAN) on a common subsample. The heat map shows centroids in the standardised space K-Means uses.
@@ -55,6 +56,16 @@ full = load("mar")
 loggers = full[full.has_logs == 1]
 df = loggers.sample(min(N, len(loggers)), random_state=SEED).reset_index(drop=True)
 R = prepare(df)
+# drop redundant features: greedy in FEATS order, drop a feature whose |Spearman| with an already
+# kept one exceeds 0.8 (decided on the features only; see 11_clustering_variants.py, variant C)
+corr = R.fillna(R.median()).corr(method="spearman").abs()
+CLF = []
+for f in FEATS:
+    if all(corr.loc[f, g] <= 0.8 for g in CLF):
+        CLF.append(f)
+DROPPED = [f for f in FEATS if f not in CLF]
+print("features used:", len(CLF), "dropped as redundant:", DROPPED)
+R = R[CLF]
 MED = R.median()
 scaler = StandardScaler().fit(R.fillna(MED))
 X = scaler.transform(R.fillna(MED))
@@ -89,7 +100,8 @@ for k in K_RANGE:
     print(f"k={k} sil={rows[-1]['silhouette']:.3f} DB={rows[-1]['davies_bouldin']:.3f} "
           f"ARI={rows[-1]['stability_ari']:.3f}")
 quality = pd.DataFrame(rows)
-ok = quality[(quality.k >= 3) & (quality.min_cluster_share >= 0.02)]
+K_MAX = int(os.environ.get("K_MAX", 7))   # at most 7 clusters + the rule-based segment (usability, aspect 7)
+ok = quality[(quality.k >= 3) & (quality.k <= K_MAX) & (quality.min_cluster_share >= 0.02)]
 ok = ok if len(ok) else quality
 macro = ok.loc[ok.silhouette.idxmax()]
 K_MACRO = int(macro.k)
@@ -154,7 +166,7 @@ algos_df.to_csv(REPORT / "cluster_algorithms.csv", index=False)
 print(algos_df.round(3).to_string(index=False))
 
 # ---- 4. centroids, names ---------------------------------------------------------------------
-z = pd.DataFrame(km.cluster_centers_, columns=FEATS)       # standardised space used by K-Means
+z = pd.DataFrame(km.cluster_centers_, columns=CLF)        # standardised space used by K-Means
 LABELS = {
     ("active_days", 1): "nghe nhiều", ("active_days", -1): "ít ngày nghe",
     ("auto_renew_rate", 1): "tự gia hạn", ("auto_renew_rate", -1): "trả thủ công",
@@ -187,13 +199,13 @@ z.index.name = "cluster"
 z.to_csv(REPORT / "cluster_zscores.csv")
 
 # ---- 5. assign every user of the cohort ------------------------------------------------------
-Xfull = scaler.transform(prepare(full).fillna(MED))
+Xfull = scaler.transform(prepare(full)[CLF].fillna(MED))
 lab_full = np.where(full.has_logs == 1, km.predict(Xfull), NOLOG)
 km_macro = models[K_MACRO]
 macro_full = np.where(full.has_logs == 1, km_macro.predict(Xfull), K_MACRO)
 pd.DataFrame({"msno": full.msno, "cluster": lab_full, "cluster_macro": macro_full}).to_parquet(
     DATA / "clusters_mar.parquet")
-joblib.dump({"scaler": scaler, "km": km, "median": MED, "names": names, "nolog_id": NOLOG},
+joblib.dump({"scaler": scaler, "km": km, "median": MED, "names": names, "nolog_id": NOLOG, "features": CLF},
             DATA / "cluster_model.joblib")
 fa = full.assign(cluster=lab_full)
 base = full.is_churn.mean()
@@ -238,18 +250,19 @@ savefig(fig, "cluster_churn.png")
 
 fig, ax = plt.subplots(figsize=(11, 0.6 * K + 2))
 im = ax.imshow(z.values, cmap="RdBu_r", vmin=-2, vmax=2, aspect="auto")
-ax.set_xticks(range(len(FEATS)), FEATS, rotation=60, ha="right", fontsize=8)
+ax.set_xticks(range(len(CLF)), CLF, rotation=60, ha="right", fontsize=8)
 ax.set_yticks(range(K), [f"{c}: {names[c]}" for c in z.index], fontsize=8)
 fig.colorbar(im)
 ax.set_title("Tâm cụm trong không gian đã chuẩn hoá (đơn vị: độ lệch chuẩn)")
 savefig(fig, "cluster_heatmap.png")
 
 save_metrics("clustering", {
+    "features": CLF, "dropped_redundant": DROPPED,
     "n_users": len(df), "n_loggers": len(loggers), "n_nolog": int((full.has_logs == 0).sum()),
     "k": K, "k_macro": K_MACRO, "nolog_id": NOLOG, "silhouette_macro": macro.silhouette,
     "silhouette": best.silhouette, "davies_bouldin": best.davies_bouldin,
     "calinski_harabasz": best.calinski_harabasz, "stability_ari": best.stability_ari,
     "stability_ari_sd": best.stability_ari_sd, "jaccard_min_cluster": float(jaccard.jaccard_mean.min()),
-    "sil_tol": SIL_TOL, "ari_min": ARI_MIN, "base_churn": base, "names": names,
+    "sil_tol": SIL_TOL, "ari_min": ARI_MIN, "k_max": K_MAX, "base_churn": base, "names": names,
     "algorithms": algos_df.to_dict("records"), "runtime_s": time.time() - t0,
 })

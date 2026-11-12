@@ -31,6 +31,9 @@ Nhánh `Khanh` sửa và bổ sung khoảng 3.500 dòng code trên 27 file. Bả
 | `mining/08_business_value.py` | – | **Mới**: hiệu chỉnh xác suất, đường lợi nhuận |
 | `mining/09_model_improvement.py` | – | **Mới**: thêm 13 đặc trưng thanh toán, tinh chỉnh tham số bằng Optuna |
 | `mining/10_metrics_summary.py` | – | **Mới**: khung đánh giá 7 khía cạnh, độ phủ luật, PSI giữa 2 tháng, xếp hạng yếu tố ảnh hưởng |
+| `mining/11_clustering_variants.py` | – | **Mới**: so sánh 4 cách chọn đặc trưng cho phân cụm |
+| `mining/12_ordering_sensitivity.py` | – | **Mới** (Codex viết): độ nhạy của thứ tự giao dịch cùng ngày |
+| `mining/13_drift_ablation.py` | – | **Mới**: bỏ đặc trưng lệch theo lịch để kiểm chứng nguyên nhân AUC giảm |
 | `mining/common.py`, `mining/transforms.py` | Đọc dữ liệu, điền giá trị thiếu trước khi chia (gây rò rỉ nhẹ) | Không điền trước khi chia; hàm dùng chung cho các bước |
 | `report/build_report.py` | Số liệu và tên nhóm ghi tay | Lấy số từ kết quả; viết lại lời văn dễ hiểu; tự đánh số bảng/hình; dịch luật và chuỗi sang tiếng Việt (`vi_labels.py`) |
 | `report/make_diagrams.py` | – | **Mới**: sơ đồ quy trình và trục thời gian |
@@ -52,7 +55,7 @@ Nhánh `Khanh` sửa và bổ sung khoảng 3.500 dòng code trên 27 file. Bả
 |---|---|---|
 | ROC-AUC mô hình | 0,977 (công bố, có rò rỉ, kiểm tra trong cùng tháng) | 0,870 (kiểm tra trên tháng sau). So sánh công bằng trên cùng phép chia: rò rỉ làm tăng ảo 0,920 → 0,976 |
 | Luật mạnh nhất | "không có nhật ký nghe + không có gói (trong tháng 3) → rời bỏ 99,7%" (gần như chính là định nghĩa nhãn) | "gói > 30 ngày → rời bỏ 83%", kiểm tra lại trên dữ liệu riêng và trên tháng 2 |
-| Số nhóm khách | 5 (dựa trên dữ liệu tháng 3, có cụm nhân tạo) | 3 cụm + 1 nhóm quy tắc; cấu trúc vừa phải nhưng trung thực, lặp lại ở tháng 2 |
+| Số nhóm khách | 5 (dựa trên dữ liệu tháng 3, có cụm nhân tạo) | 7 cụm (13 đặc trưng, bỏ 3 đặc trưng trùng) + 1 nhóm quy tắc; ổn định khi lấy mẫu lại (ARI 0,996), tách nhau vừa phải |
 | Hành vi nghe nhạc | Có vẻ quan trọng | Gần như không phân biệt được ai rời bỏ (phát hiện thật sau khi bỏ rò rỉ) |
 | Kỹ thuật khai phá | 3 | 4 kỹ thuật chính + phát hiện bất thường, PCA/UMAP |
 

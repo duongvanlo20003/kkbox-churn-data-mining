@@ -23,8 +23,9 @@ Report structure (7 sections, weights): Business Understanding 15, Dataset 5, Pr
 - Keep the natural churn prior (~9 %); do not class-balance samples.
 - pandas 3 and DuckDB 2: `astype(str)` keeps NaN, `groupby.apply` drops the key column, relations have no `fetchone()` (use `con.execute`).
 - Set `PYTHONUTF8=1` on Windows (Vietnamese output).
+- Clustering: users without listening logs are a rule-based segment; K-Means runs on 13 features (3 redundant ones dropped, |Spearman| > 0.8), k <= 7 chosen by silhouette + bootstrap ARI, never by churn. Segment names live in `report/segment_names.json` (ids must match the run).
 - Known dirty columns: `bd` (age: 60 % invalid), `gender` (49 % missing).
 
 ## Layout
 
-`data_prep/` (download, features per cohort, sequences, audit data) -> `analysis/` (EDA) -> `mining/` (01 clustering, 02 rules, 03 classification, 04 bonus, 05 sequential, 06 validation) -> `report/`. All scripts read `data/features_<cohort>.parquet` via `mining/common.py`. Smoke-test with synthetic data: `python tests/make_synthetic_data.py data_synth` then `DATA_DIR=data_synth REPORT_DIR=report_synth python run_all.py --skip-download`.
+`data_prep/` (download, features per cohort, sequences, audit data) -> `analysis/` (EDA) -> `mining/` (01 clustering, 02 rules, 03 classification, 04 bonus, 05 sequential, 06 leakage audit, 07 temporal stability, 08 calibration/profit, 09 model improvement, 10 7-aspect evaluation, 11–13 sensitivity analyses) -> `report/`. All scripts read `data/features_<cohort>.parquet` via `mining/common.py`. Smoke-test with synthetic data: `python tests/make_synthetic_data.py data_synth` then `DATA_DIR=data_synth REPORT_DIR=report_synth python run_all.py --skip-download`.
