@@ -93,7 +93,7 @@ Chi tiết thay đổi từng file: [THAY_DOI.md](THAY_DOI.md).
 | Phân cụm lại ở tháng 2 (ARI) | 0,98 | 0,98 | 0,72 |
 | Chênh lệch tỉ lệ rời bỏ | 3,3% – 84% | 6,6% – 84% | 3,2% – 84% |
 
-Bản cuối dùng 13 đặc trưng (bỏ 3 đặc trưng trùng), tìm ra 7 nhóm có ý nghĩa nghiệp vụ, trong đó có nhóm "nghe nhiều nhưng trả thủ công" (8,3% khách, 22% rời bỏ) mà bản 3 cụm không thấy. Đánh đổi: các nhóm chỉ tách nhau vừa phải (silhouette 0,21), một cụm nhỏ kém ổn định, và phân cụm lại ở tháng 2 chỉ giống ở mức khá (0,72). Cả ba điểm đều ghi rõ trong báo cáo.
+Bản cuối dùng 13 đặc trưng (bỏ 3 đặc trưng trùng), tìm ra 7 nhóm có ý nghĩa nghiệp vụ, trong đó có nhóm "nghe nhiều nhưng trả thủ công" (8,3% khách, 22% rời bỏ) mà bản 3 cụm không thấy. Đánh đổi: các nhóm tách nhau yếu (silhouette 0,21, dưới ngưỡng 0,25), một cụm nhỏ kém ổn định, và phân cụm lại ở tháng 2 chỉ giống ở mức khá (0,72). Cả ba điểm đều ghi rõ trong báo cáo.
 
 ---
 
@@ -104,9 +104,9 @@ File `mining/10_metrics_summary.py` → `report/metrics_summary.csv`, trình bà
 | Khía cạnh | Câu hỏi | Kết luận tóm tắt |
 |---|---|---|
 | 1. Tính hợp lệ | Có dùng nhầm thông tin tương lai, dữ liệu lỗi không? | **Đạt**: không có giao dịch sau mốc; lỗi đã xử lý; đo được mức thổi phồng 0,05–0,07 |
-| 2. Chất lượng kỹ thuật | Từng kỹ thuật tự nó có tốt không? | Mô hình (ROC-AUC 0,870, PR-AUC 0,603), luật, chuỗi **đạt**; phân cụm **vừa phải** (silhouette 0,21, DB 1,36) |
+| 2. Chất lượng kỹ thuật | Từng kỹ thuật tự nó có tốt không? | Mô hình (ROC-AUC 0,870, PR-AUC 0,603), luật, chuỗi **đạt**; phân cụm **chưa đạt về độ tách** (silhouette 0,21 dưới ngưỡng 0,25; DB 1,36) |
 | 3. Độ tin cậy | Có giữ trên dữ liệu chưa thấy và tháng khác? | Luật (r 0,999, 33/34 giữ hướng), chuỗi (100%) **đạt**; phân cụm ổn định khi lấy mẫu lại (ARI 0,996) nhưng một cụm nhỏ kém ổn định (Jaccard 0,47) và phân cụm lại ở tháng 2 chỉ giống ở mức khá (ARI 0,72) |
-| 4. Phân biệt rủi ro | Có tách được khách rủi ro cao và thấp? | **Đạt**: lift 9,3 so với 0,25; lift top 10% = 6,1 |
+| 4. Phân biệt rủi ro | Có tách được khách rủi ro cao và thấp? | **Đạt**: lift 9,3 so với 0,21; lift top 10% = 6,1 |
 | 5. Độ phủ | Phát hiện bao trùm bao nhiêu phần vấn đề? | 5 luật gắn cờ 5,1% khách, bao phủ 36% khách rời bỏ; mô hình 10% khách → 61% |
 | 6. Kinh doanh và vận hành | Áp dụng thật có lợi và bền không? | Có lãi theo giả định; **chưa đạt** về hiệu chuẩn (ECE 0,026); 2 đặc trưng thay đổi đáng kể giữa tháng |
 | 7. Khả năng giải thích | Người làm kinh doanh có dùng được? | **Đạt**: 8 nhóm có tên nghiệp vụ; luật trung bình 2 điều kiện; chuỗi 2–3 bước |
@@ -121,6 +121,6 @@ Các yếu tố ảnh hưởng (mục 6.5 báo cáo, `report/factor_summary.csv`
 
 **Kết luận chính không đổi sau khi sửa**: rủi ro rời bỏ gắn với cách khách trả tiền (tự gia hạn, gói dài trả thủ công), thói quen nghe chỉ bổ sung.
 
-**Giới hạn đã nêu rõ trong báo cáo**: các cụm chỉ tách nhau vừa phải, cách chia phụ thuộc việc chọn đặc trưng (lựa chọn sau quan sát) và lặp lại ở tháng khác chỉ ở mức khá; xác suất dự báo lệch khi tỉ lệ rời bỏ thay đổi; chỉ có 2 tháng có nhãn; quan hệ tìm được là liên hệ, chưa phải nhân quả.
+**Giới hạn đã nêu rõ trong báo cáo**: các cụm tách nhau yếu (silhouette 0,21), cách chia phụ thuộc việc chọn đặc trưng (lựa chọn sau quan sát) và lặp lại ở tháng khác chỉ ở mức khá; xác suất dự báo lệch khi tỉ lệ rời bỏ thay đổi; chỉ có 2 tháng có nhãn; quan hệ tìm được là liên hệ, chưa phải nhân quả.
 
 **Các mục "nên bổ sung" đã làm ở vòng 13** (mục 6.7 báo cáo): so sánh 4 cách chọn đặc trưng cho phân cụm, kiểm tra độ nhạy của thứ tự giao dịch cùng ngày, và thí nghiệm bỏ đặc trưng lệch theo lịch. Còn lại cho hướng phát triển: kiểm tra trên nhiều tháng hơn, thử nghiệm A/B, đo thời gian từ tín hiệu cảnh báo đến ngày hết hạn.

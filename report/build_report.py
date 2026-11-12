@@ -320,7 +320,7 @@ if len(alg):
 alg_i = alg.set_index("algorithm") if len(alg) else None
 jac_s = jac.jaccard_mean.sort_values()
 weak = jac_s.index[0]
-P(f"Đánh giá: các cụm tách nhau ở mức vừa phải (silhouette {num(cl.get('silhouette'), 2)}, Davies–Bouldin "
+P(f"Đánh giá: các cụm tách nhau yếu (silhouette {num(cl.get('silhouette'), 2)}, Davies–Bouldin "
   f"{num(cl.get('davies_bouldin'), 2)}) nhưng rất ổn định khi chạy lại trên mẫu khác (ARI {num(cl.get('stability_ari'), 3)}). "
   f"Phân cụm phân cấp Ward cho cách chia khá giống K-Means (ARI {num(alg_i.loc['Agglomerative (Ward)', 'ari_vs_kmeans'], 2)}) "
   f"và cùng mức chênh lệch rủi ro; HDBSCAN chỉ tìm được {int(alg_i.loc['HDBSCAN', 'n_clusters'])} vùng dày đặc và coi "
@@ -543,14 +543,15 @@ P("Nhận xét tổng hợp:")
 bullets(d, [x for x in [
     "Tính hợp lệ: đạt. Không có thông tin sau mốc quan sát; các lỗi dữ liệu lớn đã được xử lý; mức thổi phồng của cách "
     "làm cũ đã được đo (0,05–0,07 ROC-AUC).",
-    f"Chất lượng kỹ thuật: mô hình dự báo, luật kết hợp và mẫu tuần tự đạt. Phân cụm chỉ đạt mức vừa phải về độ tách "
+    f"Chất lượng kỹ thuật: mô hình dự báo, luật kết hợp và mẫu tuần tự đạt. Phân cụm chưa đạt về độ tách (dưới ngưỡng 0,25) "
     f"(silhouette {num(cl.get('silhouette'), 2)}, Davies–Bouldin {num(cl.get('davies_bouldin'), 1)}): khách hàng không chia "
     "thành các nhóm tách biệt rõ.",
     f"Độ tin cậy: luật kết hợp và mẫu tuần tự rất đáng tin (đúng trên dữ liệu giữ riêng và lặp lại ở tháng 2). Phân cụm "
     f"rất ổn định khi lấy mẫu lại (ARI {num(cl.get('stability_ari'), 2)}), trừ một cụm nhỏ (Jaccard "
     f"{num(cl.get('jaccard_min_cluster'), 2)}); khi phân cụm lại trên tháng 2 thì độ giống chỉ ở mức khá "
     f"(ARI {num(st.get('ari_feb_refit_vs_mar_model'), 2)}).",
-    "Phân biệt rủi ro: đạt. Chênh lệch giữa nhóm rủi ro nhất và an toàn nhất rất lớn (lift khoảng 9 so với 0,25).",
+    f"Phân biệt rủi ro: đạt. Chênh lệch giữa luật rủi ro nhất và an toàn nhất rất lớn (lift khoảng 9 so với "
+    f"{num(csv('retention_rules.csv').lift_holdout.min(), 2)} trên dữ liệu giữ riêng).",
     f"Độ phủ: 5 luật đơn giản bao phủ {pct(cov5.share_churners_covered, 0)} khách rời bỏ khi gắn cờ "
     f"{pct(cov5.share_users_flagged)} khách; mô hình bao phủ {pct(lg.get('recall@10%'), 0)} khi liên hệ 10% khách. Luật dễ "
     "giải thích, nhưng độ phủ thấp hơn mô hình." if cov5 is not None else None,
@@ -646,7 +647,7 @@ comp = pd.DataFrame([
 T(comp, "So sánh bốn kỹ thuật")
 P("Bốn kỹ thuật đi đến cùng một kết luận: nhóm mua gói dài hạn và trả thủ công là rủi ro nhất; tắt tự gia hạn là dấu "
   "hiệu rủi ro chính; thói quen nghe nhạc chỉ bổ sung. Vì các kỹ thuật dùng chung một bộ dữ liệu nên đây là sự nhất "
-  "quán, chưa phải bằng chứng độc lập. Mỗi kỹ thuật có điểm yếu riêng: phân cụm chỉ cho cấu trúc vừa phải; luật kết hợp "
+  "quán, chưa phải bằng chứng độc lập. Mỗi kỹ thuật có điểm yếu riêng: phân cụm chỉ cho các nhóm tách nhau yếu; luật kết hợp "
   "phụ thuộc cách chia ngưỡng; mẫu tuần tự phải thử rất nhiều chuỗi nên cần kiểm định chặt; mô hình dự báo khó giải "
   "thích và nhạy với thay đổi giữa các tháng. Toàn bộ quy trình chạy trên một máy tính cá nhân 16 GB RAM trong khoảng "
   "50 phút.")
@@ -773,7 +774,7 @@ H("9. Kết luận, hạn chế và hướng phát triển", 1)
 P("Kết luận: ở KKBox, rủi ro khách rời bỏ gắn chặt nhất với cách khách trả tiền (tự gia hạn hay trả tay, gói tháng hay "
   "gói dài), còn thói quen nghe nhạc chỉ bổ sung. Bốn kỹ thuật cho kết quả nhất quán; luật kết hợp và mẫu tuần tự đều "
   "đúng trên dữ liệu giữ riêng và lặp lại ở tháng 2. Phân cụm cho 7 nhóm có ý nghĩa và ổn định khi lấy mẫu lại, dù các "
-  "nhóm không tách nhau rõ và cách chia phụ thuộc vào việc chọn đặc trưng; nhóm gói dài hạn là phát hiện rõ nhất.")
+  "nhóm tách nhau yếu và cách chia phụ thuộc vào việc chọn đặc trưng; nhóm gói dài hạn là phát hiện rõ nhất.")
 P(f"Về phương pháp, đồ án phát hiện và đo được lỗi rò rỉ dữ liệu của phiên bản trước (trên cùng phép chia, ROC-AUC "
   f"tăng ảo từ {num(clean_auc)} lên {num(audit.get('v1 recipe (unfiltered *_v2 files)', {}).get('roc_auc'))}; khi kiểm tra đúng "
   f"cách trên tháng sau, mô hình sạch đạt {num(lg.get('roc_auc'))}), phát hiện và sửa các bản ghi lỗi (gói 0 ngày, ngày "
@@ -783,7 +784,7 @@ bullets(d, [
     "Danh sách khách mỗi tháng do KKBox chọn sẵn; chỉ có hai tháng có nhãn.",
     "Không có dữ liệu về lý do khách tắt tự gia hạn, giá của đối thủ hay khiếu nại; mã phương thức thanh toán không có tên.",
     "Các luật và nhóm khách cho thấy mối liên hệ, chưa chứng minh nguyên nhân.",
-    "Các cụm chỉ tách nhau ở mức vừa phải; cách chia phụ thuộc vào việc chọn đặc trưng và lặp lại ở tháng khác chỉ ở mức khá.",
+    "Các cụm tách nhau yếu (silhouette dưới 0,25); cách chia phụ thuộc vào việc chọn đặc trưng và lặp lại ở tháng khác chỉ ở mức khá.",
     "Tuổi và giới tính thiếu nhiều; một số đặc trưng bị giới hạn bởi ngày bắt đầu của dữ liệu.",
     "Xác suất dự báo bị lệch khi tỉ lệ rời bỏ thay đổi; giá trị kinh doanh dựa trên giả định.",
     "Các giải thích ở mục 6.5 là giả thuyết; chưa đo được thời gian từ tín hiệu cảnh báo đến ngày hết hạn, và chưa có "
