@@ -1,0 +1,517 @@
+<title>Bàn kiểm tra rời bỏ KKBox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a working desk — header strip, tab bar, then one tool view at a time (form left, verdict right). */
+:root {
+  --bg: #F4F3EF; --panel: #FFFFFF; --ink: #1B2333; --muted: #5A6475; --line: #DEDBD2;
+  --navy: #14213D; --accent: #B9501C; --accent-soft: #FBEADF; --calm: #2F5D9C; --calm-soft: #E5ECF6;
+  --hi: #B42318; --hi-soft: #FDE7E4; --mid: #B86E00; --mid-soft: #FCF0D9; --lo: #1F7A4D; --lo-soft: #E3F3EA;
+  --f-body: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; --f-num: 'JetBrains Mono', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10151F; --panel: #19202D; --ink: #E7EAF0; --muted: #9AA4B5; --line: #2C3546;
+  --navy: #E7EAF0; --accent: #F08A52; --accent-soft: #3A2418; --calm: #7FA8E0; --calm-soft: #1D2A40;
+  --hi: #FF8A7A; --hi-soft: #3B1E1B; --mid: #F2B552; --mid-soft: #382A12; --lo: #6BCB97; --lo-soft: #15302A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10151F; --panel: #19202D; --ink: #E7EAF0; --muted: #9AA4B5; --line: #2C3546;
+  --navy: #E7EAF0; --accent: #F08A52; --accent-soft: #3A2418; --calm: #7FA8E0; --calm-soft: #1D2A40;
+  --hi: #FF8A7A; --hi-soft: #3B1E1B; --mid: #F2B552; --mid-soft: #382A12; --lo: #6BCB97; --lo-soft: #15302A; color-scheme: dark }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0; color: var(--navy); text-wrap: balance; }
+.lead { margin: 0; color: var(--muted); max-width: 70ch; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+nav a { padding: 10px 14px; text-decoration: none; color: var(--muted); font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -1px; border-radius: 6px 6px 0 0; }
+nav a:hover { color: var(--ink); }
+nav a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--calm); outline-offset: 2px; }
+h2 { font-size: 22px; margin: 0; color: var(--navy); text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; color: var(--navy); }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.view { display: flex; flex-direction: column; gap: 18px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+@media (max-width: 460px) { .form { grid-template-columns: 1fr; } }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+select, input[type=range] { font: inherit; font-size: 14px; color: var(--ink); }
+select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); width: 100%; }
+.full { grid-column: 1 / -1; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button { font: inherit; font-weight: 600; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.verdict { border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+.v-hi { background: var(--hi-soft); } .v-hi .big { color: var(--hi); }
+.v-mid { background: var(--mid-soft); } .v-mid .big { color: var(--mid); }
+.v-lo { background: var(--lo-soft); } .v-lo .big { color: var(--lo); }
+.v-base { background: var(--calm-soft); } .v-base .big { color: var(--calm); }
+.big { font-family: var(--f-num); font-size: 44px; font-weight: 700; line-height: 1.1; }
+.pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.p-hi { background: var(--hi-soft); color: var(--hi); } .p-mid { background: var(--mid-soft); color: var(--mid); }
+.p-lo { background: var(--lo-soft); color: var(--lo); } .p-base { background: var(--calm-soft); color: var(--calm); }
+ul.clean { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.rule b { font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 13px; }
+.track { height: 12px; background: var(--bg); border-radius: 6px; position: relative; overflow: hidden; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; }
+.base-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .55; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+td.r, th.r { text-align: right; }
+.seg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.seg { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.seg .rate { font-family: var(--f-num); font-size: 28px; font-weight: 700; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 13px; color: var(--muted); }
+.kv span:nth-child(even) { color: var(--ink); font-family: var(--f-num); text-align: right; }
+.tx { display: grid; grid-template-columns: 28px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.tx .flags { display: flex; gap: 10px; flex-wrap: wrap; grid-column: 2 / -1; font-size: 13px; }
+.tx .flags label { flex-direction: row; align-items: center; gap: 5px; font-weight: 500; color: var(--ink); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--calm-soft); color: var(--calm); font-weight: 600; }
+.chip.warn { background: var(--accent-soft); color: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.stat .n { font-family: var(--f-num); font-size: 26px; font-weight: 700; color: var(--navy); }
+svg text { fill: var(--muted); font-family: var(--f-body); font-size: 12px; }
+.doc { display: flex; flex-direction: column; gap: 16px; max-width: 860px; }
+.doc p, .doc li { max-width: 72ch; }
+.doc ol, .doc ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width .35s ease; } }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Demo sản phẩm · Đồ án DAM501 · Dữ liệu thật KKBox 2017</span>
+  <h1>Bàn kiểm tra rời bỏ KKBox</h1>
+  <p class="lead">Công cụ cho bộ phận chăm sóc khách hàng: nhập đặc điểm và lịch sử mua gói của một khách, xem khách thuộc kiểu nào, khớp quy tắc nào, rủi ro bỏ đi bao nhiêu và nên làm gì. Mọi con số lấy từ kết quả chạy trên 970.960 khách tháng 3/2017.</p>
+</header>
+
+<nav aria-label="Các phần của demo">
+  <a href="#kiem-tra">1. Kiểm tra một khách</a>
+  <a href="#chuoi">2. Lịch sử mua gói</a>
+  <a href="#nhom">3. 8 nhóm khách</a>
+  <a href="#quy-tac">4. Bộ quy tắc</a>
+  <a href="#goi-dien">5. Nên gọi bao nhiêu khách</a>
+  <a href="#mo-ta">Mô tả sản phẩm</a>
+</nav>
+
+<!-- 1. Single customer check -->
+<section class="view" id="v-kiem-tra">
+  <div class="row" style="justify-content:space-between">
+    <h2>Kiểm tra một khách hàng</h2>
+    <div class="row"><span class="small muted">Khách mẫu:</span>
+      <button type="button" data-preset="risky">Gói dài, trả tay</button>
+      <button type="button" data-preset="loyal">Trung thành</button>
+      <button type="button" data-preset="manual">Nghe nhiều, trả tay</button>
+      <button type="button" data-preset="silent">Không nghe</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <form class="panel" id="f-user" autocomplete="off">
+      <h3>Thông tin khách (tính đến ngày chốt)</h3>
+      <div class="form">
+        <label for="i-renew">Tự gia hạn ở lần mua cuối<select id="i-renew"><option value="on">Bật</option><option value="off">Tắt</option></select></label>
+        <label for="i-plan">Độ dài gói gần nhất<select id="i-plan"><option value="short">Dưới 8 ngày</option><option value="30">30 ngày</option><option value="long">Dài hơn 30 ngày</option></select></label>
+        <label for="i-via">Kênh đăng ký<select id="i-via"><option value="7">Kênh 7</option><option value="9">Kênh 9</option><option value="3">Kênh 3</option><option value="4">Kênh 4</option><option value="13">Kênh 13</option></select></label>
+        <label for="i-tenure">Thâm niên<select id="i-tenure"><option value="tenure<1y">Dưới 1 năm</option><option value="tenure1-3y">1–3 năm</option><option value="tenure3-6y">3–6 năm</option><option value="tenure>6y">Trên 6 năm</option></select></label>
+        <label for="i-cancel">Từng hủy gói trước đây<select id="i-cancel"><option value="no">Chưa</option><option value="yes">Đã từng</option></select></label>
+        <label for="i-expire">Gói hiện tại hết hạn<select id="i-expire"><option value="expires<=31d">Trong 31 ngày tới</option><option value="expires>31d">Sau hơn 31 ngày</option><option value="expired_at_T">Đã hết hạn</option></select></label>
+        <label for="i-active">Số ngày nghe trong 60 ngày<select id="i-active"><option value="none">Không nghe bài nào</option><option value="low">Ít (khoảng 22 ngày trở xuống)</option><option value="mid">Vừa (23–44 ngày)</option><option value="high">Nhiều (trên 44 ngày)</option></select></label>
+        <label for="i-trend">Xu hướng nghe gần đây<select id="i-trend"><option value="flat">Ổn định</option><option value="falling">Giảm dần</option><option value="rising">Tăng</option></select></label>
+        <label for="i-skip">Hay bỏ qua bài giữa chừng<select id="i-skip"><option value="no">Không</option><option value="yes">Có</option></select></label>
+        <label for="i-gender">Giới tính khai báo<select id="i-gender"><option value="unknown">Không khai báo</option><option value="female">Nữ</option><option value="male">Nam</option></select></label>
+        <label for="i-seg" class="full">Nhóm khách (từ bước phân cụm)<select id="i-seg"></select></label>
+      </div>
+      <p class="note">Trong hệ thống thật, các ô này được điền tự động từ dữ liệu giao dịch và nhật ký nghe. Ở đây bạn chọn tay để thử.</p>
+    </form>
+    <div class="panel" id="out-user" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 2. Sequence check -->
+<section class="view" id="v-chuoi" hidden>
+  <div class="row" style="justify-content:space-between">
+    <h2>Đọc lịch sử mua gói</h2>
+    <div class="row"><span class="small muted">Lịch sử mẫu:</span>
+      <button type="button" data-seq="long">Trả tay rồi mua gói dài</button>
+      <button type="button" data-seq="cancel">Hủy rồi đổi gói</button>
+      <button type="button" data-seq="auto">Luôn trả tự động</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Các lần giao dịch, cũ nhất ở trên</h3>
+      <div id="tx-list" class="bars"></div>
+      <div class="row"><button type="button" id="tx-add" class="primary">Thêm giao dịch</button><button type="button" id="tx-clear">Xóa hết</button></div>
+      <p class="note">“Đổi gói” được tự đánh dấu khi độ dài gói khác lần trước. Mẫu tuần tự cho phép các bước không liền nhau.</p>
+    </div>
+    <div class="panel" id="out-seq" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 3. Segments -->
+<section class="view" id="v-nhom" hidden>
+  <h2>8 nhóm khách hàng</h2>
+  <p class="muted">Chia bằng K-Means trên 13 đặc trưng hành vi, không dùng nhãn rời bỏ. Khách không nghe bài nào được tách riêng theo quy tắc. Vạch đen trên thanh là mức chung 9%.</p>
+  <div class="seg-grid" id="seg-grid"></div>
+</section>
+
+<!-- 4. Rules -->
+<section class="view" id="v-quy-tac" hidden>
+  <div class="row" style="justify-content:space-between">
+    <h2>Bộ quy tắc “nếu… thì…”</h2>
+    <div class="row" role="group" aria-label="Lọc quy tắc">
+      <button type="button" data-rf="churn" class="primary">Báo rủi ro (25)</button>
+      <button type="button" data-rf="retain">Báo an toàn (9)</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><div class="tablewrap"><table id="rule-table"></table></div>
+      <p class="note">Số liệu đo trên 30% khách tháng 3 để riêng, không dùng khi tìm quy tắc. Tìm bằng FP-Growth, kiểm định thống kê có hiệu chỉnh FDR.</p></div>
+    <div class="panel">
+      <h3>Dùng bao nhiêu quy tắc là đủ?</h3>
+      <label for="i-topk"><span>Số quy tắc rủi ro đầu bảng: <span id="topk-v" class="num"></span></span><input type="range" id="i-topk" min="1" max="10" value="5"></label>
+      <div class="stats" id="cov-stats"></div>
+      <p class="note">Mỗi quy tắc thêm vào đánh dấu thêm khách, bắt thêm người sắp đi, nhưng tỉ lệ đúng trong nhóm bị đánh dấu giảm dần.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Profit -->
+<section class="view" id="v-goi-dien" hidden>
+  <h2>Nên gọi cho bao nhiêu khách?</h2>
+  <div class="grid2">
+    <div class="panel">
+      <label for="i-share"><span>Gọi cho <span id="share-v" class="num"></span> khách có điểm rủi ro cao nhất</span><input type="range" id="i-share" min="1" max="100" value="10"></label>
+      <div class="row" role="group" aria-label="Tỉ lệ giữ chân thành công">
+        <span class="small muted">Cứ 10 người sắp đi được gọi thì giữ lại được:</span>
+        <button type="button" data-sr="0.1">1 người</button><button type="button" data-sr="0.2" class="primary">2 người</button><button type="button" data-sr="0.3">3 người</button>
+      </div>
+      <div class="stats" id="profit-stats"></div>
+      <p class="note" id="assume"></p>
+    </div>
+    <div class="panel"><h3>Lãi ròng theo số khách được gọi</h3><div id="profit-chart"></div>
+      <p class="small muted">Đường cam: chọn theo điểm rủi ro của mô hình LightGBM. Đường xám: chọn ngẫu nhiên. Đơn vị: triệu NTD.</p></div>
+  </div>
+</section>
+
+<!-- 6. Product description -->
+<section class="view" id="v-mo-ta" hidden>
+  <div class="doc">
+    <h2>Mô tả sản phẩm</h2>
+    <p><b>Bàn kiểm tra rời bỏ KKBox</b> là sản phẩm đầu ra của đồ án: một bộ công cụ giúp dịch vụ nghe nhạc trả phí phát hiện sớm khách sắp không gia hạn, hiểu vì sao, và chọn đúng người để chăm sóc. Sản phẩm được xây trên dữ liệu thật của KKBox (cuộc thi WSDM 2017 trên Kaggle) và kiểm tra trên một tháng mà mô hình chưa từng thấy.</p>
+    <h3>Ai dùng, dùng để làm gì</h3>
+    <ul>
+      <li><b>Chăm sóc khách hàng:</b> mỗi tháng nhận danh sách khách rủi ro cao, kèm lý do dễ đọc (quy tắc nào khớp) để gọi điện hoặc gửi ưu đãi.</li>
+      <li><b>Marketing:</b> hiểu 8 kiểu khách để thiết kế chiến dịch riêng, ví dụ mời bật tự gia hạn cho nhóm nghe nhiều nhưng trả tay.</li>
+      <li><b>Quản lý sản phẩm:</b> theo dõi các sự kiện báo động (tắt tự gia hạn, đổi gói, chuyển sang trả tay) ngay khi chúng xảy ra.</li>
+    </ul>
+    <h3>Gồm bốn thành phần</h3>
+    <div class="parts" id="parts"></div>
+    <h3>Đầu vào và đầu ra</h3>
+    <ul>
+      <li><b>Đầu vào:</b> hồ sơ thành viên, lịch sử giao dịch mua gói, nhật ký nghe nhạc hằng ngày trong 60 ngày trước ngày chốt. Chỉ dùng dữ liệu trước ngày chốt.</li>
+      <li><b>Đầu ra cho mỗi khách:</b> nhóm khách, các quy tắc rủi ro hoặc an toàn khớp, chuỗi giao dịch đáng lo, điểm rủi ro của mô hình và gợi ý hành động.</li>
+      <li><b>Đầu ra cho cả tháng:</b> danh sách gọi điện được xếp theo rủi ro, kèm ước tính lãi lỗ theo số khách được gọi.</li>
+    </ul>
+    <h3>Mỗi tháng chạy như thế nào</h3>
+    <ol>
+      <li>Chốt ngày quan sát (ví dụ cuối tháng), lấy dữ liệu đến ngày đó.</li>
+      <li>Làm sạch dữ liệu (gói ghi 0 ngày, ngày hết hạn vô lý, tuổi không hợp lệ) và tóm mỗi khách thành 32 đặc trưng cùng một chuỗi giao dịch.</li>
+      <li>Gán nhóm khách, đối chiếu bộ quy tắc và chuỗi, chấm điểm bằng mô hình.</li>
+      <li>Xuất danh sách gọi cho khoảng 8–15% khách rủi ro nhất, kèm lý do.</li>
+      <li>Sau 30 ngày, so với thực tế để theo dõi chất lượng và chạy lại khi tỉ lệ rời bỏ thay đổi.</li>
+    </ol>
+    <h3>Chất lượng đo được</h3>
+    <div class="stats" id="quality"></div>
+    <h3>Giới hạn cần biết</h3>
+    <ul>
+      <li>Kết quả cho thấy những điều <b>đi cùng</b> việc bỏ đi, chưa chứng minh nguyên nhân. Gợi ý nên thử A/B trước khi làm rộng.</li>
+      <li>Ranh giới giữa các nhóm khách còn mờ (silhouette 0,21); nhóm “hay được giảm giá” chưa ổn định.</li>
+      <li>Con số xác suất của mô hình bị lệch khi tỉ lệ rời bỏ đổi giữa các tháng, nên chỉ dùng để xếp thứ tự.</li>
+      <li>Chỉ có 2 tháng có nhãn; con số lãi lỗ dựa trên giả định chi phí.</li>
+      <li>Ô “kiểm tra một khách” trong demo này chỉ dùng bộ quy tắc, chưa chạy mô hình LightGBM trên trình duyệt.</li>
+    </ul>
+    <p class="small muted">Mã nguồn, báo cáo và hướng dẫn chạy: <a href="https://github.com/duongvanlo20003/kkbox-churn-data-mining/tree/Khanh">github.com/duongvanlo20003/kkbox-churn-data-mining</a> (nhánh Khanh).</p>
+  </div>
+</section>
+</div>
+
+<script>
+const D = /*DATA*/;
+const PRIOR = D.prior;
+const pct = (x, d = 1) => (x * 100).toFixed(d).replace('.', ',') + '%';
+const fmt = n => Math.round(n).toLocaleString('vi-VN');
+const mil = v => (v / 1e6).toFixed(1).replace('.', ',') + ' triệu';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const SEG = Object.fromEntries(D.segments.map(s => [s.cluster, s]));
+const ITEM = {
+  'active=low': 'ít ngày nghe', 'auto_renew=off': 'tắt tự gia hạn', 'cancelled_before': 'từng hủy gói',
+  'expired_at_T': 'gói đã hết hạn', 'expires<=31d': 'gói hết hạn trong 31 ngày', 'expires>31d': 'gói còn hơn 31 ngày',
+  'gender=female': 'giới tính nữ', 'gender=unknown': 'không khai giới tính', 'no_logs': 'không nghe bài nào',
+  'plan>30d': 'gói dài hơn 30 ngày', 'skip=high': 'hay bỏ qua bài', 'tenure1-3y': 'thâm niên 1–3 năm',
+  'tenure<1y': 'thâm niên dưới 1 năm', 'tenure>6y': 'thâm niên trên 6 năm', 'trend=falling': 'nghe giảm dần',
+  'trend=rising': 'nghe tăng', 'via=3': 'đăng ký qua kênh 3', 'via=4': 'đăng ký qua kênh 4', 'via=7': 'đăng ký qua kênh 7', 'via=9': 'đăng ký qua kênh 9'
+};
+const itemVi = it => it.startsWith('segment=') ? 'nhóm “' + SEG[+it.slice(8)].name + '”' : (ITEM[it] || it);
+const ruleVi = r => r.items.map(itemVi).join(' + ');
+const level = p => p >= 0.5 ? ['hi', 'Rất cao'] : p >= 0.2 ? ['hi', 'Cao'] : p > PRIOR * 1.15 ? ['mid', 'Trên mức chung'] : p < PRIOR * 0.85 ? ['lo', 'Thấp'] : ['base', 'Ngang mức chung'];
+const frac = p => { const k = Math.round(p * 10); return k >= 1 ? `Cứ 10 người thì khoảng ${k} người bỏ đi` : `Khoảng ${Math.max(1, Math.round(p * 100))} trên 100 người bỏ đi`; };
+
+const ACTIONS = {
+  0: 'Theo dõi phản ứng sau khi hết khuyến mãi; nhắc gia hạn khi ưu đãi sắp hết.',
+  1: 'Ưu tiên mời bật tự gia hạn: họ nghe nhiều, chỉ là chưa bật.',
+  2: 'Giữ nguyên trải nghiệm, không cần ưu đãi tốn kém.',
+  3: 'Nhắc sớm trước khi hết gói, tặng ưu đãi chuyển sang gói tháng tự gia hạn.',
+  4: 'Chào mừng, gợi ý nội dung để giữ đà nghe, mời bật tự gia hạn.',
+  5: 'Gửi gợi ý bài hát để kéo khách nghe lại; rủi ro chưa cao.',
+  6: 'Hỏi lý do đổi hoặc hủy gói, đề xuất gói phù hợp.',
+  7: 'Đang trả tiền nhưng không nghe: nhắc giá trị dịch vụ trước kỳ gia hạn.'
+};
+
+/* ---------- routing ---------- */
+const VIEWS = ['kiem-tra', 'chuoi', 'nhom', 'quy-tac', 'goi-dien', 'mo-ta'];
+function route() {
+  const h = location.hash.slice(1); const v = VIEWS.includes(h) ? h : 'kiem-tra';
+  VIEWS.forEach(x => { document.getElementById('v-' + x).hidden = x !== v; });
+  document.querySelectorAll('nav a').forEach(a => { if (a.getAttribute('href') === '#' + v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+}
+addEventListener('hashchange', route);
+
+/* ---------- 1. single customer ---------- */
+const $ = id => document.getElementById(id);
+const segSel = $('i-seg');
+segSel.innerHTML = '<option value="">Chưa biết</option>' + D.segments.filter(s => s.cluster !== 7).map(s => `<option value="${s.cluster}">${esc(s.name)}</option>`).join('');
+const PRESETS = {
+  risky: { renew: 'off', plan: 'long', via: '9', tenure: 'tenure1-3y', cancel: 'no', expire: 'expires>31d', active: 'high', trend: 'flat', skip: 'no', gender: 'unknown', seg: '3' },
+  loyal: { renew: 'on', plan: '30', via: '7', tenure: 'tenure>6y', cancel: 'no', expire: 'expires<=31d', active: 'high', trend: 'flat', skip: 'no', gender: 'unknown', seg: '2' },
+  manual: { renew: 'off', plan: '30', via: '9', tenure: 'tenure1-3y', cancel: 'no', expire: 'expires<=31d', active: 'high', trend: 'flat', skip: 'no', gender: 'female', seg: '1' },
+  silent: { renew: 'on', plan: '30', via: '7', tenure: 'tenure3-6y', cancel: 'no', expire: 'expires<=31d', active: 'none', trend: 'flat', skip: 'no', gender: 'unknown', seg: '' }
+};
+function setPreset(k) { const p = PRESETS[k]; for (const f in p) $('i-' + f).value = p[f]; checkUser(); }
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => setPreset(b.dataset.preset)));
+$('f-user').addEventListener('change', checkUser);
+$('f-user').addEventListener('submit', e => e.preventDefault());
+
+function userItems() {
+  const v = id => $('i-' + id).value; const s = new Set();
+  if (v('renew') === 'off') s.add('auto_renew=off');
+  if (v('plan') === 'long') s.add('plan>30d');
+  s.add('via=' + v('via')); s.add(v('tenure')); s.add(v('expire'));
+  if (v('cancel') === 'yes') s.add('cancelled_before');
+  if (v('gender') !== 'male') s.add('gender=' + v('gender'));
+  const noLogs = v('active') === 'none';
+  $('i-trend').disabled = noLogs; $('i-skip').disabled = noLogs; $('i-seg').disabled = noLogs;
+  if (noLogs) { s.add('no_logs'); s.add('segment=7'); }
+  else {
+    if (v('active') === 'low') s.add('active=low');
+    if (v('trend') !== 'flat') s.add('trend=' + v('trend'));
+    if (v('skip') === 'yes') s.add('skip=high');
+    if (v('seg') !== '') s.add('segment=' + v('seg'));
+  }
+  return s;
+}
+function groupBars() {
+  const v = id => $('i-' + id).value; const G = D.groups; const rows = [];
+  rows.push(['Tự gia hạn ' + (v('renew') === 'on' ? 'bật' : 'tắt'), G.auto_renew[v('renew')]]);
+  rows.push(['Gói ' + { short: 'dưới 8 ngày', '30': '8–30 ngày', long: 'trên 30 ngày' }[v('plan')], G.plan[{ short: '1-7', '30': '8-30', long: '>30' }[v('plan')]]]);
+  rows.push(['Kênh ' + v('via'), G.registered_via[v('via') + '.0']]);
+  rows.push(['Hết hạn: ' + { 'expires<=31d': 'trong 31 ngày', 'expires>31d': 'sau 31 ngày', 'expired_at_T': 'đã hết' }[v('expire')], G.expire[{ 'expires<=31d': '16-31', 'expires>31d': '>31', 'expired_at_T': '<=0' }[v('expire')]]]);
+  rows.push(['Giới tính: ' + { unknown: 'không khai', female: 'nữ', male: 'nam' }[v('gender')], G.gender[v('gender')]]);
+  return rows.filter(r => r[1]);
+}
+function barRow(label, rate, color, n) {
+  return `<div class="bar"><span>${esc(label)}</span><div class="track" title="${pct(rate)}"><div class="fill" style="width:${Math.min(100, rate * 100)}%;background:${color}"></div><div class="base-mark" style="left:${PRIOR * 100}%"></div></div><span class="num" style="text-align:right">${pct(rate)}</span></div>`;
+}
+function checkUser() {
+  const items = userItems();
+  const hit = D.rules.filter(r => r.items.every(i => items.has(i)));
+  const churn = hit.filter(r => r.dir === 'churn').sort((a, b) => b.conf - a.conf);
+  const retain = hit.filter(r => r.dir === 'retain').sort((a, b) => a.conf - b.conf);
+  let p, src;
+  if (churn.length) { p = churn[0].conf; src = 'theo quy tắc rủi ro mạnh nhất khớp với khách này'; }
+  else if (retain.length) { p = retain[0].conf; src = 'theo quy tắc an toàn khớp với khách này'; }
+  else { const g = D.groups.auto_renew[$('i-renew').value]; p = g[1]; src = 'không khớp quy tắc nào, dùng tỉ lệ của nhóm cùng trạng thái tự gia hạn'; }
+  const [lv, lvName] = level(p);
+  const segId = items.has('segment=7') ? 7 : ($('i-seg').value === '' ? null : +$('i-seg').value);
+  const seg = segId === null ? null : SEG[segId];
+  const actions = [];
+  if (items.has('plan>30d')) actions.push(ACTIONS[3]);
+  else if (items.has('auto_renew=off')) actions.push('Mời bật tự gia hạn, có thể kèm ưu đãi nhỏ cho tháng đầu.');
+  if (seg && !actions.includes(ACTIONS[segId])) actions.push(ACTIONS[segId]);
+  if (items.has('cancelled_before')) actions.push('Từng hủy gói: hỏi lý do và đề xuất gói phù hợp hơn.');
+  if (!actions.length) actions.push('Không cần can thiệp tốn kém; giữ trải nghiệm tốt.');
+  const callList = p >= 0.2;
+  $('out-user').innerHTML = `
+    <div class="verdict v-${lv}">
+      <span class="pill p-${lv}">Rủi ro: ${lvName}</span>
+      <span class="big">${pct(p)}</span>
+      <p><b>${frac(p)}</b> trong số khách giống như vậy. Mức chung là ${pct(PRIOR)}.</p>
+      <p class="small muted">Ước tính ${src}; đo trên dữ liệu để riêng.</p>
+    </div>
+    <div class="row"><span class="pill ${callList ? 'p-hi' : 'p-lo'}">${callList ? 'Đưa vào danh sách gọi tháng này' : 'Chưa cần gọi'}</span>
+      ${seg ? `<span class="pill p-base">Nhóm: ${esc(seg.name)} · bỏ đi ${pct(seg.churn_rate)}</span>` : ''}</div>
+    <h3>Quy tắc khớp (${hit.length})</h3>
+    ${hit.length ? `<ul class="clean">${churn.concat(retain).slice(0, 6).map(r => `<li class="rule"><span>Nếu khách <b>${esc(ruleVi(r))}</b></span><span class="pill ${r.dir === 'churn' ? 'p-hi' : 'p-lo'} num">${pct(r.conf)} bỏ đi</span><span class="small muted">gấp ${String(r.lift.toFixed(1)).replace('.', ',')} lần mức chung · ${pct(r.sup)} khách có đặc điểm này</span></li>`).join('')}</ul>${hit.length > 6 ? `<p class="small muted">và ${hit.length - 6} quy tắc khác.</p>` : ''}` : '<p class="muted">Không có quy tắc nào khớp hoàn toàn.</p>'}
+    <h3>Nên làm gì</h3>
+    <ul class="clean">${actions.map(a => `<li>• ${esc(a)}</li>`).join('')}</ul>
+    <h3>Từng đặc điểm riêng lẻ</h3>
+    <div class="bars">${groupBars().map(([l, g]) => barRow(l, g[1], g[1] > PRIOR ? 'var(--accent)' : 'var(--calm)')).join('')}</div>
+    <p class="small muted">Tỉ lệ bỏ đi của tất cả khách có cùng đặc điểm đó; vạch đen là mức chung ${pct(PRIOR)}.</p>`;
+}
+
+/* ---------- 2. sequences ---------- */
+const PAYS = { PAY_AUTO: 'Trả tự động', PAY_MANUAL: 'Trả tay', CANCEL: 'Hủy gói' };
+const PLANS = { PLAN_30: 'Gói 30 ngày', PLAN_LONG: 'Gói dài', PLAN_SHORT: 'Gói ngắn', NONE: 'Không rõ gói' };
+const TOK = { PAY_AUTO: 'trả tự động', PAY_MANUAL: 'trả tay', CANCEL: 'hủy', FREE: 'miễn phí', PLAN_30: 'gói 30 ngày', PLAN_LONG: 'gói dài', PLAN_SHORT: 'gói ngắn', PLAN_CHANGE: 'đổi gói', METHOD_CHANGE: 'đổi cách trả', GAP: 'ngắt quãng trên 30 ngày' };
+let txs = [];
+const SEQS = {
+  long: [{ pay: 'PAY_MANUAL', plan: 'PLAN_30' }, { pay: 'PAY_MANUAL', plan: 'PLAN_LONG' }, { pay: 'PAY_MANUAL', plan: 'PLAN_LONG' }],
+  cancel: [{ pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'CANCEL', plan: 'PLAN_30' }, { pay: 'PAY_MANUAL', plan: 'PLAN_SHORT' }],
+  auto: [{ pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'PAY_AUTO', plan: 'PLAN_30' }]
+};
+function tokens() {
+  let prevPlan = null;
+  return txs.map((t, i) => {
+    const s = new Set([t.pay]);
+    if (t.plan !== 'NONE') s.add(t.plan);
+    if (t.free && t.pay !== 'CANCEL') s.add('FREE');
+    if (t.method && i > 0) s.add('METHOD_CHANGE');
+    if (t.gap && i > 0) s.add('GAP');
+    if (t.plan !== 'NONE') { if (prevPlan && prevPlan !== t.plan) s.add('PLAN_CHANGE'); prevPlan = t.plan; }
+    return s;
+  });
+}
+function matches(pattern, seq) { let j = 0; for (const s of seq) { if (j < pattern.length && pattern[j].every(x => s.has(x))) j++; } return j === pattern.length; }
+function renderTx() {
+  $('tx-list').innerHTML = txs.map((t, i) => `
+    <div class="tx">
+      <span class="num muted">${i + 1}</span>
+      <select aria-label="Loại giao dịch ${i + 1}" data-i="${i}" data-k="pay">${Object.entries(PAYS).map(([k, v]) => `<option value="${k}" ${t.pay === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <select aria-label="Độ dài gói ${i + 1}" data-i="${i}" data-k="plan">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${t.plan === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <button type="button" data-del="${i}" aria-label="Xóa giao dịch ${i + 1}">Xóa</button>
+      <div class="flags">
+        <label><input type="checkbox" data-i="${i}" data-k="free" ${t.free ? 'checked' : ''}> Miễn phí</label>
+        ${i > 0 ? `<label><input type="checkbox" data-i="${i}" data-k="method" ${t.method ? 'checked' : ''}> Đổi cách thanh toán</label>
+        <label><input type="checkbox" data-i="${i}" data-k="gap" ${t.gap ? 'checked' : ''}> Cách lần trước hơn 30 ngày</label>` : ''}
+      </div>
+    </div>`).join('') || '<p class="muted">Chưa có giao dịch. Bấm “Thêm giao dịch”.</p>';
+  checkSeq();
+}
+$('tx-list').addEventListener('change', e => { const el = e.target; const i = +el.dataset.i; if (isNaN(i)) return; txs[i][el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; checkSeq(); });
+$('tx-list').addEventListener('click', e => { const d = e.target.dataset.del; if (d !== undefined) { txs.splice(+d, 1); renderTx(); } });
+$('tx-add').addEventListener('click', () => { const last = txs[txs.length - 1]; txs.push({ pay: last ? last.pay : 'PAY_AUTO', plan: last ? last.plan : 'PLAN_30' }); renderTx(); });
+$('tx-clear').addEventListener('click', () => { txs = []; renderTx(); });
+document.querySelectorAll('[data-seq]').forEach(b => b.addEventListener('click', () => { txs = SEQS[b.dataset.seq].map(t => ({ ...t })); renderTx(); }));
+function checkSeq() {
+  const seq = tokens();
+  const hit = D.seqs.filter(p => matches(p.steps, seq));
+  const risk = hit.filter(p => p.dir === 'churn').sort((a, b) => b.conf - a.conf);
+  const safe = hit.filter(p => p.dir === 'retain').sort((a, b) => a.conf - b.conf);
+  const top = risk[0] || safe[0];
+  const stepVi = st => st.map(x => TOK[x] || x).join(' + ');
+  let head;
+  if (!seq.length) head = '<p class="muted">Thêm vài giao dịch để xem kết quả.</p>';
+  else if (!top) head = `<div class="verdict v-base"><span class="pill p-base">Không khớp mẫu nào</span><p>Lịch sử này không chứa chuỗi nào trong 30 mẫu đã kiểm định. Mức chung là ${pct(PRIOR)}.</p></div>`;
+  else { const [lv, nm] = level(top.conf); head = `<div class="verdict v-${lv}"><span class="pill p-${lv}">${top.dir === 'churn' ? 'Cảnh báo' : 'An toàn'}: ${nm}</span><span class="big">${pct(top.conf)}</span><p><b>${frac(top.conf)}</b> trong số khách có chuỗi “${esc(top.steps.map(stepVi).join(' → '))}”.</p><p class="small muted">Chuỗi mạnh nhất khớp; đo trên dữ liệu để riêng.</p></div>`; }
+  $('out-seq').innerHTML = `${head}
+    ${seq.length ? `<h3>Máy đọc lịch sử thành</h3><div class="chips">${seq.map((s, i) => `<span class="chip ${[...s].some(x => ['CANCEL', 'PAY_MANUAL', 'PLAN_LONG', 'PLAN_CHANGE', 'GAP', 'METHOD_CHANGE'].includes(x)) ? 'warn' : ''}">${i + 1}. ${esc([...s].map(x => TOK[x]).join(', '))}</span>`).join('')}</div>` : ''}
+    ${hit.length ? `<h3>Các mẫu khớp (${hit.length})</h3><ul class="clean">${risk.concat(safe).slice(0, 6).map(p => `<li class="rule"><span>${esc(p.steps.map(stepVi).join(' → '))}</span><span class="pill ${p.dir === 'churn' ? 'p-hi' : 'p-lo'} num">${pct(p.conf)}</span><span class="small muted">gấp ${p.lift.toFixed(1).replace('.', ',')} lần mức chung · ${pct(p.sup)} khách có chuỗi này</span></li>`).join('')}</ul>` : ''}
+    <p class="note">Điểm mạnh của mẫu tuần tự: các bước này xảy ra ngay lúc khách giao dịch, nên có thể báo động trong ngày thay vì chờ cuối tháng.</p>`;
+}
+
+/* ---------- 3. segments ---------- */
+$('seg-grid').innerHTML = D.segments.slice().sort((a, b) => b.churn_rate - a.churn_rate).map(s => {
+  const [lv, nm] = level(s.churn_rate);
+  return `<article class="seg">
+    <div class="row" style="justify-content:space-between"><span class="pill p-${lv}">${nm}</span><span class="small muted num">${pct(s.share)} khách</span></div>
+    <h3>${esc(s.name)}</h3>
+    <span class="rate" style="color:var(--${lv === 'base' ? 'calm' : lv})">${pct(s.churn_rate)} <span class="small muted" style="font-family:var(--f-body);font-weight:500">bỏ đi</span></span>
+    <div class="track"><div class="fill" style="width:${s.churn_rate * 100}%;background:var(--${lv === 'base' ? 'calm' : lv})"></div><div class="base-mark" style="left:${PRIOR * 100}%"></div></div>
+    <div class="kv"><span>Số khách</span><span>${fmt(s.n)}</span><span>Bật tự gia hạn</span><span>${pct(s.auto_renew_rate, 0)}</span><span>Ngày nghe / 60 ngày</span><span>${s.active_days.toFixed(0)}</span><span>Gói gần nhất (ngày)</span><span>${s.last_plan_days.toFixed(0)}</span></div>
+    <p class="small"><b>Nên làm:</b> ${esc(ACTIONS[s.cluster])}</p>
+  </article>`;
+}).join('');
+
+/* ---------- 4. rules ---------- */
+let rf = 'churn';
+function renderRules() {
+  const rs = D.rules.filter(r => r.dir === rf).sort((a, b) => rf === 'churn' ? b.conf - a.conf : a.conf - b.conf);
+  $('rule-table').innerHTML = `<thead><tr><th>Nếu khách…</th><th class="r">Bỏ đi</th><th class="r">So với mức chung</th><th class="r">Khách có</th></tr></thead><tbody>${rs.map(r => `<tr><td>${esc(ruleVi(r))}</td><td class="r num">${pct(r.conf)}</td><td class="r num">${r.lift >= 1 ? 'gấp ' + r.lift.toFixed(1).replace('.', ',') : r.lift.toFixed(2).replace('.', ',') + '×'}</td><td class="r num">${pct(r.sup)}</td></tr>`).join('')}</tbody>`;
+  document.querySelectorAll('[data-rf]').forEach(b => b.classList.toggle('primary', b.dataset.rf === rf));
+}
+document.querySelectorAll('[data-rf]').forEach(b => b.addEventListener('click', () => { rf = b.dataset.rf; renderRules(); }));
+function renderCov() {
+  const k = +$('i-topk').value; $('topk-v').textContent = k;
+  const c = D.coverage.find(x => x.top_k_rules === k) || D.coverage[D.coverage.length - 1];
+  $('cov-stats').innerHTML = `
+    <div class="stat"><span class="small muted">Khách bị đánh dấu</span><span class="n">${pct(c.share_users_flagged)}</span></div>
+    <div class="stat"><span class="small muted">Người sắp đi được bắt</span><span class="n" style="color:var(--accent)">${pct(c.share_churners_covered)}</span></div>
+    <div class="stat"><span class="small muted">Bị đánh dấu mà bỏ đi thật</span><span class="n">${pct(c.churn_rate_in_flagged)}</span></div>`;
+}
+$('i-topk').max = D.coverage.length; $('i-topk').addEventListener('input', renderCov);
+
+/* ---------- 5. profit ---------- */
+let sr = '0.2';
+function renderProfit() {
+  const share = +$('i-share').value; $('share-v').textContent = share + '%';
+  const curve = D.profit[sr]; const pt = curve[Math.min(curve.length, share) - 1];
+  const best = curve.reduce((a, b) => b[1] > a[1] ? b : a);
+  $('profit-stats').innerHTML = `
+    <div class="stat"><span class="small muted">Lãi ròng</span><span class="n" style="color:var(--${pt[1] >= 0 ? 'lo' : 'hi'})">${mil(pt[1])}</span><span class="small muted">NTD mỗi tháng</span></div>
+    <div class="stat"><span class="small muted">Nếu chọn ngẫu nhiên</span><span class="n" style="color:var(--${pt[2] >= 0 ? 'lo' : 'hi'})">${mil(pt[2])}</span><span class="small muted">NTD</span></div>
+    <div class="stat"><span class="small muted">Người sắp đi được gọi tới</span><span class="n">${pct(pt[3], 0)}</span></div>
+    <div class="stat"><span class="small muted">Lãi nhiều nhất khi gọi</span><span class="n">${pct(best[0], 0)}</span><span class="small muted">${mil(best[1])} NTD</span></div>`;
+  const W = 560, H = 300, L = 62, R = 14, T = 14, B = 40;
+  const ys = curve.flatMap(r => [r[1], r[2]]); const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const X = x => L + (x - 0.01) / 0.99 * (W - L - R), Y = y => T + (ymax - y) / (ymax - ymin) * (H - T - B);
+  const line = i => curve.map((r, j) => (j ? 'L' : 'M') + X(r[0]).toFixed(1) + ' ' + Y(r[i]).toFixed(1)).join(' ');
+  const step = Math.pow(10, Math.floor(Math.log10((ymax - ymin) / 4))); const st = Math.ceil((ymax - ymin) / 4 / step) * step;
+  let ticks = ''; for (let v = Math.ceil(ymin / st) * st; v <= ymax; v += st) ticks += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="${v === 0 ? 1.6 : 1}"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${(v / 1e6).toFixed(st < 1e6 ? 1 : 0).replace('.', ',')}</text>`;
+  let xt = ''; [0.01, 0.25, 0.5, 0.75, 1].forEach(v => xt += `<text x="${X(v)}" y="${H - 18}" text-anchor="middle">${Math.round(v * 100)}%</text>`);
+  $('profit-chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Lãi ròng theo tỉ lệ khách được gọi">${ticks}${xt}
+    <text x="${(L + W - R) / 2}" y="${H - 2}" text-anchor="middle">tỉ lệ khách được gọi</text>
+    <path d="${line(2)}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4"/>
+    <path d="${line(1)}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+    <line x1="${X(pt[0])}" x2="${X(pt[0])}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-opacity=".35"/>
+    <circle cx="${X(pt[0])}" cy="${Y(pt[1])}" r="5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/></svg>`;
+  document.querySelectorAll('[data-sr]').forEach(b => b.classList.toggle('primary', b.dataset.sr === sr));
+}
+$('i-share').addEventListener('input', renderProfit);
+document.querySelectorAll('[data-sr]').forEach(b => b.addEventListener('click', () => { sr = b.dataset.sr; renderProfit(); }));
+const A = D.assume;
+$('assume').textContent = `Giả định: mỗi cuộc gọi tốn ${A.contact_cost_ntd} NTD; ưu đãi bằng ${A.discount_share_of_month * 100}% phí tháng (149 NTD) cho mọi người được gọi; giữ được một khách mang lại ${A.value_months} tháng phí. Ưu đãi cũng bị dùng bởi người vốn không định đi, nên gọi quá nhiều sẽ lỗ.`;
+
+/* ---------- 6. description ---------- */
+const lgb = D.models.find(m => m.model === 'LightGBM');
+$('parts').innerHTML = [
+  ['Chia nhóm khách', '8 kiểu khách có tên dễ hiểu, từ “Trung thành” (3% bỏ đi) đến “Mua gói dài, trả tay” (84%).', '#nhom'],
+  ['Bộ quy tắc “nếu… thì…”', '25 quy tắc báo rủi ro và 9 quy tắc báo an toàn, mỗi quy tắc 1–3 điều kiện.', '#quy-tac'],
+  ['Cảnh báo theo chuỗi', '30 chuỗi giao dịch đã kiểm định, dùng để báo động ngay khi khách giao dịch.', '#chuoi'],
+  ['Chấm điểm và danh sách gọi', 'Mô hình LightGBM xếp hạng khách, kèm đường lãi lỗ để chọn số khách cần gọi.', '#goi-dien']
+].map(([t, d, h]) => `<a class="seg" href="${h}" style="text-decoration:none;color:inherit"><h3>${t}</h3><p class="small muted">${d}</p><span class="small" style="color:var(--accent);font-weight:600">Xem trong demo →</span></a>`).join('');
+const c5 = D.coverage.find(x => x.top_k_rules === 5);
+$('quality').innerHTML = `
+  <div class="stat"><span class="small muted">Điểm xếp hạng ROC-AUC</span><span class="n">${lgb.roc_auc.toFixed(3).replace('.', ',')}</span><span class="small muted">học tháng 2, thi tháng 3</span></div>
+  <div class="stat"><span class="small muted">Gọi 10% rủi ro nhất bắt được</span><span class="n">${pct(lgb['recall@10%'], 0)}</span><span class="small muted">người sắp đi (ngẫu nhiên: 10%)</span></div>
+  <div class="stat"><span class="small muted">5 quy tắc đầu bắt được</span><span class="n">${pct(c5.share_churners_covered, 0)}</span><span class="small muted">khi đánh dấu ${pct(c5.share_users_flagged)} khách</span></div>
+  <div class="stat"><span class="small muted">Quy tắc lặp lại ở tháng 2</span><span class="n">33/34</span><span class="small muted">vẫn đúng chiều</span></div>`;
+
+setPreset('risky'); txs = SEQS.long.map(t => ({ ...t })); renderTx(); renderRules(); renderCov(); renderProfit(); route();
+</script>

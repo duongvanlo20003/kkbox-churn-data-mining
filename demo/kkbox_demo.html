@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Bàn kiểm tra rời bỏ KKBox</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a working desk — header strip, tab bar, then one tool view at a time (form left, verdict right). */
+:root {
+  --bg: #F4F3EF; --panel: #FFFFFF; --ink: #1B2333; --muted: #5A6475; --line: #DEDBD2;
+  --navy: #14213D; --accent: #B9501C; --accent-soft: #FBEADF; --calm: #2F5D9C; --calm-soft: #E5ECF6;
+  --hi: #B42318; --hi-soft: #FDE7E4; --mid: #B86E00; --mid-soft: #FCF0D9; --lo: #1F7A4D; --lo-soft: #E3F3EA;
+  --f-body: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif; --f-num: 'JetBrains Mono', Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #10151F; --panel: #19202D; --ink: #E7EAF0; --muted: #9AA4B5; --line: #2C3546;
+  --navy: #E7EAF0; --accent: #F08A52; --accent-soft: #3A2418; --calm: #7FA8E0; --calm-soft: #1D2A40;
+  --hi: #FF8A7A; --hi-soft: #3B1E1B; --mid: #F2B552; --mid-soft: #382A12; --lo: #6BCB97; --lo-soft: #15302A; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #10151F; --panel: #19202D; --ink: #E7EAF0; --muted: #9AA4B5; --line: #2C3546;
+  --navy: #E7EAF0; --accent: #F08A52; --accent-soft: #3A2418; --calm: #7FA8E0; --calm-soft: #1D2A40;
+  --hi: #FF8A7A; --hi-soft: #3B1E1B; --mid: #F2B552; --mid-soft: #382A12; --lo: #6BCB97; --lo-soft: #15302A; color-scheme: dark }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 1180px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px; display: flex; flex-direction: column; gap: 22px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0; color: var(--navy); text-wrap: balance; }
+.lead { margin: 0; color: var(--muted); max-width: 70ch; }
+nav { display: flex; gap: 6px; flex-wrap: wrap; border-bottom: 1px solid var(--line); }
+nav a { padding: 10px 14px; text-decoration: none; color: var(--muted); font-weight: 600; border-bottom: 3px solid transparent; margin-bottom: -1px; border-radius: 6px 6px 0 0; }
+nav a:hover { color: var(--ink); }
+nav a[aria-current="page"] { color: var(--accent); border-bottom-color: var(--accent); }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px solid var(--calm); outline-offset: 2px; }
+h2 { font-size: 22px; margin: 0; color: var(--navy); text-wrap: balance; }
+h3 { font-size: 16px; margin: 0; color: var(--navy); }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.view { display: flex; flex-direction: column; gap: 18px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 20px; align-items: start; }
+@media (max-width: 860px) { .grid2 { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.form { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+@media (max-width: 460px) { .form { grid-template-columns: 1fr; } }
+label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; font-weight: 600; color: var(--muted); }
+select, input[type=range] { font: inherit; font-size: 14px; color: var(--ink); }
+select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); width: 100%; }
+.full { grid-column: 1 / -1; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+button { font: inherit; font-weight: 600; font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.verdict { border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 6px; }
+.v-hi { background: var(--hi-soft); } .v-hi .big { color: var(--hi); }
+.v-mid { background: var(--mid-soft); } .v-mid .big { color: var(--mid); }
+.v-lo { background: var(--lo-soft); } .v-lo .big { color: var(--lo); }
+.v-base { background: var(--calm-soft); } .v-base .big { color: var(--calm); }
+.big { font-family: var(--f-num); font-size: 44px; font-weight: 700; line-height: 1.1; }
+.pill { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+.p-hi { background: var(--hi-soft); color: var(--hi); } .p-mid { background: var(--mid-soft); color: var(--mid); }
+.p-lo { background: var(--lo-soft); color: var(--lo); } .p-base { background: var(--calm-soft); color: var(--calm); }
+ul.clean { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rule { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.rule b { font-weight: 600; }
+.bars { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: grid; grid-template-columns: minmax(0, 190px) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 13px; }
+.track { height: 12px; background: var(--bg); border-radius: 6px; position: relative; overflow: hidden; }
+.fill { position: absolute; inset: 0 auto 0 0; border-radius: 6px; }
+.base-mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--ink); opacity: .55; }
+.tablewrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+td.r, th.r { text-align: right; }
+.seg-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+.seg { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+.seg .rate { font-family: var(--f-num); font-size: 28px; font-weight: 700; }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 13px; color: var(--muted); }
+.kv span:nth-child(even) { color: var(--ink); font-family: var(--f-num); text-align: right; }
+.tx { display: grid; grid-template-columns: 28px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
+.tx .flags { display: flex; gap: 10px; flex-wrap: wrap; grid-column: 2 / -1; font-size: 13px; }
+.tx .flags label { flex-direction: row; align-items: center; gap: 5px; font-weight: 500; color: var(--ink); }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 12px; padding: 3px 8px; border-radius: 6px; background: var(--calm-soft); color: var(--calm); font-weight: 600; }
+.chip.warn { background: var(--accent-soft); color: var(--accent); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: flex; flex-direction: column; gap: 2px; }
+.stat .n { font-family: var(--f-num); font-size: 26px; font-weight: 700; color: var(--navy); }
+svg text { fill: var(--muted); font-family: var(--f-body); font-size: 12px; }
+.doc { display: flex; flex-direction: column; gap: 16px; max-width: 860px; }
+.doc p, .doc li { max-width: 72ch; }
+.doc ol, .doc ul { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; }
+.parts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; }
+@media (prefers-reduced-motion: no-preference) { .fill { transition: width .35s ease; } }
+</style>
+
+<div class="wrap">
+<header>
+  <span class="eyebrow">Demo sản phẩm · Đồ án DAM501 · Dữ liệu thật KKBox 2017</span>
+  <h1>Bàn kiểm tra rời bỏ KKBox</h1>
+  <p class="lead">Công cụ cho bộ phận chăm sóc khách hàng: nhập đặc điểm và lịch sử mua gói của một khách, xem khách thuộc kiểu nào, khớp quy tắc nào, rủi ro bỏ đi bao nhiêu và nên làm gì. Mọi con số lấy từ kết quả chạy trên 970.960 khách tháng 3/2017.</p>
+</header>
+
+<nav aria-label="Các phần của demo">
+  <a href="#kiem-tra">1. Kiểm tra một khách</a>
+  <a href="#chuoi">2. Lịch sử mua gói</a>
+  <a href="#nhom">3. 8 nhóm khách</a>
+  <a href="#quy-tac">4. Bộ quy tắc</a>
+  <a href="#goi-dien">5. Nên gọi bao nhiêu khách</a>
+  <a href="#mo-ta">Mô tả sản phẩm</a>
+</nav>
+
+<!-- 1. Single customer check -->
+<section class="view" id="v-kiem-tra">
+  <div class="row" style="justify-content:space-between">
+    <h2>Kiểm tra một khách hàng</h2>
+    <div class="row"><span class="small muted">Khách mẫu:</span>
+      <button type="button" data-preset="risky">Gói dài, trả tay</button>
+      <button type="button" data-preset="loyal">Trung thành</button>
+      <button type="button" data-preset="manual">Nghe nhiều, trả tay</button>
+      <button type="button" data-preset="silent">Không nghe</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <form class="panel" id="f-user" autocomplete="off">
+      <h3>Thông tin khách (tính đến ngày chốt)</h3>
+      <div class="form">
+        <label for="i-renew">Tự gia hạn ở lần mua cuối<select id="i-renew"><option value="on">Bật</option><option value="off">Tắt</option></select></label>
+        <label for="i-plan">Độ dài gói gần nhất<select id="i-plan"><option value="short">Dưới 8 ngày</option><option value="30">30 ngày</option><option value="long">Dài hơn 30 ngày</option></select></label>
+        <label for="i-via">Kênh đăng ký<select id="i-via"><option value="7">Kênh 7</option><option value="9">Kênh 9</option><option value="3">Kênh 3</option><option value="4">Kênh 4</option><option value="13">Kênh 13</option></select></label>
+        <label for="i-tenure">Thâm niên<select id="i-tenure"><option value="tenure<1y">Dưới 1 năm</option><option value="tenure1-3y">1–3 năm</option><option value="tenure3-6y">3–6 năm</option><option value="tenure>6y">Trên 6 năm</option></select></label>
+        <label for="i-cancel">Từng hủy gói trước đây<select id="i-cancel"><option value="no">Chưa</option><option value="yes">Đã từng</option></select></label>
+        <label for="i-expire">Gói hiện tại hết hạn<select id="i-expire"><option value="expires<=31d">Trong 31 ngày tới</option><option value="expires>31d">Sau hơn 31 ngày</option><option value="expired_at_T">Đã hết hạn</option></select></label>
+        <label for="i-active">Số ngày nghe trong 60 ngày<select id="i-active"><option value="none">Không nghe bài nào</option><option value="low">Ít (khoảng 22 ngày trở xuống)</option><option value="mid">Vừa (23–44 ngày)</option><option value="high">Nhiều (trên 44 ngày)</option></select></label>
+        <label for="i-trend">Xu hướng nghe gần đây<select id="i-trend"><option value="flat">Ổn định</option><option value="falling">Giảm dần</option><option value="rising">Tăng</option></select></label>
+        <label for="i-skip">Hay bỏ qua bài giữa chừng<select id="i-skip"><option value="no">Không</option><option value="yes">Có</option></select></label>
+        <label for="i-gender">Giới tính khai báo<select id="i-gender"><option value="unknown">Không khai báo</option><option value="female">Nữ</option><option value="male">Nam</option></select></label>
+        <label for="i-seg" class="full">Nhóm khách (từ bước phân cụm)<select id="i-seg"></select></label>
+      </div>
+      <p class="note">Trong hệ thống thật, các ô này được điền tự động từ dữ liệu giao dịch và nhật ký nghe. Ở đây bạn chọn tay để thử.</p>
+    </form>
+    <div class="panel" id="out-user" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 2. Sequence check -->
+<section class="view" id="v-chuoi" hidden>
+  <div class="row" style="justify-content:space-between">
+    <h2>Đọc lịch sử mua gói</h2>
+    <div class="row"><span class="small muted">Lịch sử mẫu:</span>
+      <button type="button" data-seq="long">Trả tay rồi mua gói dài</button>
+      <button type="button" data-seq="cancel">Hủy rồi đổi gói</button>
+      <button type="button" data-seq="auto">Luôn trả tự động</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <h3>Các lần giao dịch, cũ nhất ở trên</h3>
+      <div id="tx-list" class="bars"></div>
+      <div class="row"><button type="button" id="tx-add" class="primary">Thêm giao dịch</button><button type="button" id="tx-clear">Xóa hết</button></div>
+      <p class="note">“Đổi gói” được tự đánh dấu khi độ dài gói khác lần trước. Mẫu tuần tự cho phép các bước không liền nhau.</p>
+    </div>
+    <div class="panel" id="out-seq" aria-live="polite"></div>
+  </div>
+</section>
+
+<!-- 3. Segments -->
+<section class="view" id="v-nhom" hidden>
+  <h2>8 nhóm khách hàng</h2>
+  <p class="muted">Chia bằng K-Means trên 13 đặc trưng hành vi, không dùng nhãn rời bỏ. Khách không nghe bài nào được tách riêng theo quy tắc. Vạch đen trên thanh là mức chung 9%.</p>
+  <div class="seg-grid" id="seg-grid"></div>
+</section>
+
+<!-- 4. Rules -->
+<section class="view" id="v-quy-tac" hidden>
+  <div class="row" style="justify-content:space-between">
+    <h2>Bộ quy tắc “nếu… thì…”</h2>
+    <div class="row" role="group" aria-label="Lọc quy tắc">
+      <button type="button" data-rf="churn" class="primary">Báo rủi ro (25)</button>
+      <button type="button" data-rf="retain">Báo an toàn (9)</button>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel"><div class="tablewrap"><table id="rule-table"></table></div>
+      <p class="note">Số liệu đo trên 30% khách tháng 3 để riêng, không dùng khi tìm quy tắc. Tìm bằng FP-Growth, kiểm định thống kê có hiệu chỉnh FDR.</p></div>
+    <div class="panel">
+      <h3>Dùng bao nhiêu quy tắc là đủ?</h3>
+      <label for="i-topk"><span>Số quy tắc rủi ro đầu bảng: <span id="topk-v" class="num"></span></span><input type="range" id="i-topk" min="1" max="10" value="5"></label>
+      <div class="stats" id="cov-stats"></div>
+      <p class="note">Mỗi quy tắc thêm vào đánh dấu thêm khách, bắt thêm người sắp đi, nhưng tỉ lệ đúng trong nhóm bị đánh dấu giảm dần.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 5. Profit -->
+<section class="view" id="v-goi-dien" hidden>
+  <h2>Nên gọi cho bao nhiêu khách?</h2>
+  <div class="grid2">
+    <div class="panel">
+      <label for="i-share"><span>Gọi cho <span id="share-v" class="num"></span> khách có điểm rủi ro cao nhất</span><input type="range" id="i-share" min="1" max="100" value="10"></label>
+      <div class="row" role="group" aria-label="Tỉ lệ giữ chân thành công">
+        <span class="small muted">Cứ 10 người sắp đi được gọi thì giữ lại được:</span>
+        <button type="button" data-sr="0.1">1 người</button><button type="button" data-sr="0.2" class="primary">2 người</button><button type="button" data-sr="0.3">3 người</button>
+      </div>
+      <div class="stats" id="profit-stats"></div>
+      <p class="note" id="assume"></p>
+    </div>
+    <div class="panel"><h3>Lãi ròng theo số khách được gọi</h3><div id="profit-chart"></div>
+      <p class="small muted">Đường cam: chọn theo điểm rủi ro của mô hình LightGBM. Đường xám: chọn ngẫu nhiên. Đơn vị: triệu NTD.</p></div>
+  </div>
+</section>
+
+<!-- 6. Product description -->
+<section class="view" id="v-mo-ta" hidden>
+  <div class="doc">
+    <h2>Mô tả sản phẩm</h2>
+    <p><b>Bàn kiểm tra rời bỏ KKBox</b> là sản phẩm đầu ra của đồ án: một bộ công cụ giúp dịch vụ nghe nhạc trả phí phát hiện sớm khách sắp không gia hạn, hiểu vì sao, và chọn đúng người để chăm sóc. Sản phẩm được xây trên dữ liệu thật của KKBox (cuộc thi WSDM 2017 trên Kaggle) và kiểm tra trên một tháng mà mô hình chưa từng thấy.</p>
+    <h3>Ai dùng, dùng để làm gì</h3>
+    <ul>
+      <li><b>Chăm sóc khách hàng:</b> mỗi tháng nhận danh sách khách rủi ro cao, kèm lý do dễ đọc (quy tắc nào khớp) để gọi điện hoặc gửi ưu đãi.</li>
+      <li><b>Marketing:</b> hiểu 8 kiểu khách để thiết kế chiến dịch riêng, ví dụ mời bật tự gia hạn cho nhóm nghe nhiều nhưng trả tay.</li>
+      <li><b>Quản lý sản phẩm:</b> theo dõi các sự kiện báo động (tắt tự gia hạn, đổi gói, chuyển sang trả tay) ngay khi chúng xảy ra.</li>
+    </ul>
+    <h3>Gồm bốn thành phần</h3>
+    <div class="parts" id="parts"></div>
+    <h3>Đầu vào và đầu ra</h3>
+    <ul>
+      <li><b>Đầu vào:</b> hồ sơ thành viên, lịch sử giao dịch mua gói, nhật ký nghe nhạc hằng ngày trong 60 ngày trước ngày chốt. Chỉ dùng dữ liệu trước ngày chốt.</li>
+      <li><b>Đầu ra cho mỗi khách:</b> nhóm khách, các quy tắc rủi ro hoặc an toàn khớp, chuỗi giao dịch đáng lo, điểm rủi ro của mô hình và gợi ý hành động.</li>
+      <li><b>Đầu ra cho cả tháng:</b> danh sách gọi điện được xếp theo rủi ro, kèm ước tính lãi lỗ theo số khách được gọi.</li>
+    </ul>
+    <h3>Mỗi tháng chạy như thế nào</h3>
+    <ol>
+      <li>Chốt ngày quan sát (ví dụ cuối tháng), lấy dữ liệu đến ngày đó.</li>
+      <li>Làm sạch dữ liệu (gói ghi 0 ngày, ngày hết hạn vô lý, tuổi không hợp lệ) và tóm mỗi khách thành 32 đặc trưng cùng một chuỗi giao dịch.</li>
+      <li>Gán nhóm khách, đối chiếu bộ quy tắc và chuỗi, chấm điểm bằng mô hình.</li>
+      <li>Xuất danh sách gọi cho khoảng 8–15% khách rủi ro nhất, kèm lý do.</li>
+      <li>Sau 30 ngày, so với thực tế để theo dõi chất lượng và chạy lại khi tỉ lệ rời bỏ thay đổi.</li>
+    </ol>
+    <h3>Chất lượng đo được</h3>
+    <div class="stats" id="quality"></div>
+    <h3>Giới hạn cần biết</h3>
+    <ul>
+      <li>Kết quả cho thấy những điều <b>đi cùng</b> việc bỏ đi, chưa chứng minh nguyên nhân. Gợi ý nên thử A/B trước khi làm rộng.</li>
+      <li>Ranh giới giữa các nhóm khách còn mờ (silhouette 0,21); nhóm “hay được giảm giá” chưa ổn định.</li>
+      <li>Con số xác suất của mô hình bị lệch khi tỉ lệ rời bỏ đổi giữa các tháng, nên chỉ dùng để xếp thứ tự.</li>
+      <li>Chỉ có 2 tháng có nhãn; con số lãi lỗ dựa trên giả định chi phí.</li>
+      <li>Ô “kiểm tra một khách” trong demo này chỉ dùng bộ quy tắc, chưa chạy mô hình LightGBM trên trình duyệt.</li>
+    </ul>
+    <p class="small muted">Mã nguồn, báo cáo và hướng dẫn chạy: <a href="https://github.com/duongvanlo20003/kkbox-churn-data-mining/tree/Khanh">github.com/duongvanlo20003/kkbox-churn-data-mining</a> (nhánh Khanh).</p>
+  </div>
+</section>
+</div>
+
+<script>
+const D = {"segments":[{"cluster":0,"name":"Hay được giảm giá, từng hủy","n":27094,"churn_rate":0.0736,"ci_low":0.0705,"ci_high":0.0768,"lift":0.8183,"share":0.0279,"auto_renew_rate":0.9764,"active_days":33.2632,"last_plan_days":30.3524,"n_cancel":0.8578,"discount_rate":0.3052,"tenure_days":1258.8385,"days_since_last_listen":2.5941,"listen_trend":0.3355},{"cluster":1,"name":"Nghe nhiều nhưng trả thủ công","n":80572,"churn_rate":0.2215,"ci_low":0.2187,"ci_high":0.2244,"lift":2.463,"share":0.083,"auto_renew_rate":0.0607,"active_days":40.3538,"last_plan_days":30.3425,"n_cancel":0.024,"discount_rate":0.0006,"tenure_days":1012.5654,"days_since_last_listen":0.8031,"listen_trend":-0.017},{"cluster":2,"name":"Trung thành: tự gia hạn, nghe nhiều","n":350966,"churn_rate":0.0322,"ci_low":0.0316,"ci_high":0.0328,"lift":0.3581,"share":0.3615,"auto_renew_rate":0.984,"active_days":38.3347,"last_plan_days":29.9885,"n_cancel":0.0004,"discount_rate":0.0022,"tenure_days":1362.263,"days_since_last_listen":0.8198,"listen_trend":-0.0276},{"cluster":3,"name":"Mua gói dài hạn, trả thủ công","n":21726,"churn_rate":0.8403,"ci_low":0.8354,"ci_high":0.8451,"lift":9.3425,"share":0.0224,"auto_renew_rate":0.071,"active_days":39.6426,"last_plan_days":260.3084,"n_cancel":0.1202,"discount_rate":0.0049,"tenure_days":1424.8864,"days_since_last_listen":1.8623,"listen_trend":-0.1672},{"cluster":4,"name":"Mới hoặc quay lại, nghe tăng nhanh","n":46553,"churn_rate":0.1735,"ci_low":0.1701,"ci_high":0.177,"lift":1.9295,"share":0.0479,"auto_renew_rate":0.7037,"active_days":9.6579,"last_plan_days":30.3481,"n_cancel":0.0584,"discount_rate":0.0012,"tenure_days":571.4072,"days_since_last_listen":2.493,"listen_trend":9.0996},{"cluster":5,"name":"Nghe thưa, lâu chưa nghe","n":111706,"churn_rate":0.0546,"ci_low":0.0533,"ci_high":0.0559,"lift":0.6069,"share":0.115,"auto_renew_rate":0.9814,"active_days":7.9674,"last_plan_days":30.0319,"n_cancel":0.1435,"discount_rate":0.0045,"tenure_days":1144.4184,"days_since_last_listen":17.0932,"listen_trend":-1.5954},{"cluster":6,"name":"Lâu năm, từng hủy hoặc đổi gói","n":143869,"churn_rate":0.0692,"ci_low":0.0679,"ci_high":0.0706,"lift":0.7698,"share":0.1482,"auto_renew_rate":0.9529,"active_days":38.1628,"last_plan_days":30.061,"n_cancel":1.2653,"discount_rate":0.0156,"tenure_days":1582.9747,"days_since_last_listen":1.1818,"listen_trend":0.0241},{"cluster":7,"name":"Không có nhật ký nghe (tách theo quy tắc)","n":188474,"churn_rate":0.0732,"ci_low":0.072,"ci_high":0.0743,"lift":0.8134,"share":0.1941,"auto_renew_rate":0.9925,"active_days":0.0,"last_plan_days":30.3428,"n_cancel":0.1141,"discount_rate":0.0148,"tenure_days":1047.2453,"days_since_last_listen":NaN,"listen_trend":NaN}],"rules":[{"items":["segment=3"],"sup":0.0223,"conf":0.8378,"lift":9.315,"conf_tr":0.8413,"dir":"churn"},{"items":["plan>30d"],"sup":0.0247,"conf":0.8234,"lift":9.154,"conf_tr":0.8288,"dir":"churn"},{"items":["active=low","auto_renew=off","via=9"],"sup":0.0113,"conf":0.5522,"lift":6.14,"conf_tr":0.5334,"dir":"churn"},{"items":["auto_renew=off","segment=4"],"sup":0.0141,"conf":0.5188,"lift":5.768,"conf_tr":0.5118,"dir":"churn"},{"items":["active=low","auto_renew=off"],"sup":0.0301,"conf":0.5172,"lift":5.75,"conf_tr":0.5041,"dir":"churn"},{"items":["expired_at_T"],"sup":0.0174,"conf":0.5009,"lift":5.569,"conf_tr":0.4958,"dir":"churn"},{"items":["auto_renew=off","tenure>6y"],"sup":0.0151,"conf":0.4848,"lift":5.39,"conf_tr":0.4888,"dir":"churn"},{"items":["auto_renew=off","gender=female","via=9"],"sup":0.0166,"conf":0.4696,"lift":5.221,"conf_tr":0.4726,"dir":"churn"},{"items":["auto_renew=off","cancelled_before"],"sup":0.0139,"conf":0.4619,"lift":5.136,"conf_tr":0.4585,"dir":"churn"},{"items":["auto_renew=off","trend=rising"],"sup":0.0316,"conf":0.4463,"lift":4.962,"conf_tr":0.4463,"dir":"churn"},{"items":["auto_renew=off","via=9"],"sup":0.0482,"conf":0.4365,"lift":4.854,"conf_tr":0.4388,"dir":"churn"},{"items":["auto_renew=off"],"sup":0.119,"conf":0.4109,"lift":4.568,"conf_tr":0.4152,"dir":"churn"},{"items":["expires>31d","gender=unknown"],"sup":0.0147,"conf":0.3246,"lift":3.608,"conf_tr":0.336,"dir":"churn"},{"items":["active=low","segment=1"],"sup":0.0123,"conf":0.339,"lift":3.769,"conf_tr":0.3164,"dir":"churn"},{"items":["active=low","via=4"],"sup":0.016,"conf":0.3097,"lift":3.443,"conf_tr":0.3033,"dir":"churn"},{"items":["cancelled_before","expires>31d"],"sup":0.0159,"conf":0.2959,"lift":3.29,"conf_tr":0.291,"dir":"churn"},{"items":["trend=rising","via=4"],"sup":0.0156,"conf":0.287,"lift":3.191,"conf_tr":0.2873,"dir":"churn"},{"items":["active=low","trend=rising","via=3"],"sup":0.0126,"conf":0.2742,"lift":3.049,"conf_tr":0.2803,"dir":"churn"},{"items":["segment=1","trend=falling"],"sup":0.0183,"conf":0.2666,"lift":2.964,"conf_tr":0.2581,"dir":"churn"},{"items":["skip=high","via=4"],"sup":0.0201,"conf":0.2502,"lift":2.781,"conf_tr":0.2524,"dir":"churn"},{"items":["segment=1","trend=rising"],"sup":0.0148,"conf":0.2567,"lift":2.854,"conf_tr":0.2512,"dir":"churn"},{"items":["segment=1","tenure<1y"],"sup":0.0203,"conf":0.2528,"lift":2.811,"conf_tr":0.2501,"dir":"churn"},{"items":["active=low","tenure1-3y","via=3"],"sup":0.0105,"conf":0.2392,"lift":2.659,"conf_tr":0.2474,"dir":"churn"},{"items":["expires>31d","segment=6"],"sup":0.0126,"conf":0.2436,"lift":2.709,"conf_tr":0.244,"dir":"churn"},{"items":["via=4"],"sup":0.0551,"conf":0.2293,"lift":2.549,"conf_tr":0.2318,"dir":"churn"},{"items":["segment=4","via=7"],"sup":0.0256,"conf":0.0184,"lift":0.205,"conf_tr":0.0168,"dir":"retain"},{"items":["tenure<1y","via=7"],"sup":0.1267,"conf":0.0221,"lift":0.245,"conf_tr":0.0219,"dir":"retain"},{"items":["expires<=31d","via=7"],"sup":0.4595,"conf":0.0239,"lift":0.266,"conf_tr":0.0238,"dir":"retain"},{"items":["segment=2"],"sup":0.3617,"conf":0.0321,"lift":0.357,"conf_tr":0.0323,"dir":"retain"},{"items":["expires<=31d","no_logs"],"sup":0.1801,"conf":0.0397,"lift":0.442,"conf_tr":0.0397,"dir":"retain"},{"items":["expires<=31d","segment=7"],"sup":0.1801,"conf":0.0397,"lift":0.442,"conf_tr":0.0397,"dir":"retain"},{"items":["expires<=31d","segment=6"],"sup":0.1314,"conf":0.044,"lift":0.489,"conf_tr":0.0434,"dir":"retain"},{"items":["expires<=31d","segment=0"],"sup":0.0265,"conf":0.0432,"lift":0.481,"conf_tr":0.0434,"dir":"retain"},{"items":["via=7"],"sup":0.4754,"conf":0.0452,"lift":0.503,"conf_tr":0.0445,"dir":"retain"}],"seqs":[{"steps":[["PAY_MANUAL"],["PLAN_LONG"],["PLAN_LONG"]],"sup":0.0102,"conf":0.6652,"lift":7.396,"conf_feb":0.3838,"dir":"churn"},{"steps":[["PLAN_LONG"],["PLAN_LONG"]],"sup":0.0184,"conf":0.6082,"lift":6.762,"conf_feb":0.3615,"dir":"churn"},{"steps":[["PLAN_CHANGE"],["PLAN_LONG"]],"sup":0.0115,"conf":0.553,"lift":6.148,"conf_feb":0.3616,"dir":"churn"},{"steps":[["METHOD_CHANGE"],["PLAN_LONG"]],"sup":0.0096,"conf":0.5485,"lift":6.098,"conf_feb":0.3378,"dir":"churn"},{"steps":[["PAY_MANUAL"],["PLAN_LONG"]],"sup":0.0298,"conf":0.5503,"lift":6.118,"conf_feb":0.3379,"dir":"churn"},{"steps":[["PLAN_LONG"]],"sup":0.0533,"conf":0.4865,"lift":5.408,"conf_feb":0.306,"dir":"churn"},{"steps":[["CANCEL"],["PLAN_CHANGE"]],"sup":0.0102,"conf":0.3959,"lift":4.401,"conf_feb":0.3104,"dir":"churn"},{"steps":[["PAY_AUTO"],["PLAN_CHANGE"]],"sup":0.011,"conf":0.3978,"lift":4.422,"conf_feb":0.3031,"dir":"churn"},{"steps":[["PLAN_30"],["PLAN_CHANGE"]],"sup":0.0355,"conf":0.3897,"lift":4.333,"conf_feb":0.2874,"dir":"churn"},{"steps":[["PAY_MANUAL","PLAN_CHANGE"]],"sup":0.0544,"conf":0.3895,"lift":4.331,"conf_feb":0.2825,"dir":"churn"},{"steps":[["PAY_MANUAL"],["PAY_MANUAL"],["PLAN_CHANGE"]],"sup":0.0333,"conf":0.3667,"lift":4.077,"conf_feb":0.2592,"dir":"churn"},{"steps":[["PLAN_CHANGE"],["PAY_MANUAL"]],"sup":0.0375,"conf":0.3542,"lift":3.939,"conf_feb":0.2729,"dir":"churn"},{"steps":[["PAY_MANUAL"],["GAP","METHOD_CHANGE","PAY_MANUAL"]],"sup":0.0138,"conf":0.3688,"lift":4.1,"conf_feb":0.3003,"dir":"churn"},{"steps":[["METHOD_CHANGE"],["GAP","PAY_MANUAL"]],"sup":0.0119,"conf":0.3471,"lift":3.859,"conf_feb":0.3205,"dir":"churn"},{"steps":[["GAP"],["GAP","PAY_MANUAL"]],"sup":0.0156,"conf":0.3404,"lift":3.785,"conf_feb":0.3384,"dir":"churn"},{"steps":[["PAY_MANUAL"],["PAY_MANUAL"],["GAP"],["GAP"]],"sup":0.0116,"conf":0.3125,"lift":3.474,"conf_feb":0.3211,"dir":"churn"},{"steps":[["PAY_MANUAL"],["FREE","PAY_MANUAL"]],"sup":0.0146,"conf":0.33,"lift":3.669,"conf_feb":0.2768,"dir":"churn"},{"steps":[["FREE"],["PAY_MANUAL"]],"sup":0.0247,"conf":0.3321,"lift":3.693,"conf_feb":0.2715,"dir":"churn"},{"steps":[["METHOD_CHANGE","PLAN_SHORT"]],"sup":0.0173,"conf":0.3325,"lift":3.696,"conf_feb":0.2786,"dir":"churn"},{"steps":[["PLAN_SHORT"],["PAY_MANUAL"]],"sup":0.0222,"conf":0.3285,"lift":3.652,"conf_feb":0.2744,"dir":"churn"},{"steps":[["PLAN_30"],["FREE","PAY_MANUAL"]],"sup":0.0167,"conf":0.3249,"lift":3.612,"conf_feb":0.2848,"dir":"churn"},{"steps":[["PLAN_CHANGE"]],"sup":0.0698,"conf":0.3264,"lift":3.629,"conf_feb":0.2378,"dir":"churn"},{"steps":[["GAP","METHOD_CHANGE"],["PAY_MANUAL"]],"sup":0.0132,"conf":0.3367,"lift":3.744,"conf_feb":0.2741,"dir":"churn"},{"steps":[["PLAN_30"],["PLAN_SHORT"]],"sup":0.0164,"conf":0.3209,"lift":3.568,"conf_feb":0.2797,"dir":"churn"},{"steps":[["FREE","METHOD_CHANGE"]],"sup":0.0199,"conf":0.3197,"lift":3.555,"conf_feb":0.2601,"dir":"churn"},{"steps":[["PAY_AUTO"],["PAY_AUTO"]],"sup":0.8636,"conf":0.05,"lift":0.556,"conf_feb":0.0331,"dir":"retain"},{"steps":[["PAY_AUTO"]],"sup":0.8925,"conf":0.0518,"lift":0.576,"conf_feb":0.0348,"dir":"retain"},{"steps":[["PLAN_30"],["PLAN_30"],["PLAN_30"],["PLAN_30"]],"sup":0.8848,"conf":0.0663,"lift":0.737,"conf_feb":0.0471,"dir":"retain"},{"steps":[["PLAN_30"],["PLAN_30"],["PLAN_30"]],"sup":0.9181,"conf":0.0681,"lift":0.757,"conf_feb":0.0489,"dir":"retain"},{"steps":[["PLAN_30"],["PLAN_30"]],"sup":0.9474,"conf":0.0714,"lift":0.794,"conf_feb":0.0515,"dir":"retain"}],"coverage":[{"top_k_rules":1,"share_users_flagged":0.0223,"share_churners_covered":0.2078,"churn_rate_in_flagged":0.8378},{"top_k_rules":2,"share_users_flagged":0.0247,"share_churners_covered":0.2265,"churn_rate_in_flagged":0.8234},{"top_k_rules":3,"share_users_flagged":0.0336,"share_churners_covered":0.2717,"churn_rate_in_flagged":0.7271},{"top_k_rules":4,"share_users_flagged":0.043,"share_churners_covered":0.3238,"churn_rate_in_flagged":0.677},{"top_k_rules":5,"share_users_flagged":0.0509,"share_churners_covered":0.3568,"churn_rate_in_flagged":0.6305},{"top_k_rules":6,"share_users_flagged":0.0674,"share_churners_covered":0.4482,"churn_rate_in_flagged":0.5983},{"top_k_rules":7,"share_users_flagged":0.0743,"share_churners_covered":0.4665,"churn_rate_in_flagged":0.5643},{"top_k_rules":8,"share_users_flagged":0.0792,"share_churners_covered":0.4795,"churn_rate_in_flagged":0.5444},{"top_k_rules":9,"share_users_flagged":0.0842,"share_churners_covered":0.4929,"churn_rate_in_flagged":0.5262},{"top_k_rules":10,"share_users_flagged":0.0911,"share_churners_covered":0.51,"churn_rate_in_flagged":0.5034}],"profit":{"0.1":[[0.01,531862.4907,-207357.9272,0.1095],[0.02,1035741.0833,-414737.2116,0.1972],[0.03,1408901.601,-622095.1388,0.2722],[0.04,1754058.0254,-829474.4232,0.3436],[0.05,2063009.8748,-1036853.7077,0.4115],[0.06,2301946.7378,-1244211.6349,0.4716],[0.07,2430147.5969,-1451590.9193,0.5193],[0.08,2452004.9304,-1658948.8465,0.5555],[0.09,2402253.8572,-1866328.1309,0.5846],[0.1,2305418.4448,-2073707.4154,0.6088],[0.11,2172556.4169,-2281065.3426,0.6293],[0.12,2020971.9832,-2488444.627,0.6477],[0.13,1857717.9088,-2695802.5542,0.6643],[0.14,1679860.5061,-2903181.8386,0.6785],[0.15,1501523.9061,-3110561.1231,0.6935],[0.16,1296228.7461,-3317919.0503,0.7064],[0.17,1078592.8661,-3525298.3347,0.7177],[0.18,848311.0061,-3732656.2619,0.727],[0.19,618667.8461,-3940035.5463,0.7346],[0.2,372951.3861,-4147414.8308,0.7426],[0.21,115492.7661,-4354772.758,0.7501],[0.22,-147410.6939,-4562152.0424,0.7576],[0.23,-420998.9339,-4769509.9696,0.7641],[0.24,-687013.7539,-4976889.254,0.7712],[0.25,-959533.9139,-5184268.5385,0.7777],[0.26,-1238726.2139,-5391626.4656,0.7836],[0.27,-1517173.3139,-5599005.7501,0.7897],[0.28,-1798572.7139,-5806363.6773,0.7953],[0.29,-2074653.6739,-6013742.9617,0.8014],[0.3,-2352720.9139,-6221122.2462,0.8074],[0.31,-2634542.5539,-6428480.1733,0.8129],[0.32,-2913263.3139,-6635859.4578,0.8189],[0.33,-3197033.7339,-6843217.385,0.824],[0.34,-3479953.0939,-7050596.6694,0.8294],[0.35,-3766187.7339,-7257975.9539,0.8345],[0.36,-4049574.4139,-7465333.881,0.8398],[0.37,-4339571.8939,-7672713.1655,0.8444],[0.38,-4625633.2339,-7880071.0927,0.8494],[0.39,-4913815.5339,-8087450.3771,0.8542],[0.4,-5202851.114,-8294829.6616,0.8587],[0.41,-5491350.934,-8502187.5887,0.8633],[0.42,-5776003.714,-8709566.8732,0.8682],[0.43,-6063640.134,-8916924.8004,0.872],[0.44,-6348357.494,-9124304.0848,0.8765],[0.45,-6630822.554,-9331683.3693,0.8809],[0.46,-6908934.034,-9539041.2964,0.8854],[0.47,-7191551.134,-9746420.5809,0.8895],[0.48,-7467240.914,-9953778.5081,0.8936],[0.49,-7731545.554,-10161157.7925,0.8967],[0.5,-8006952.334,-10368537.077,0.9005],[0.51,-8264010.134,-10575895.0041,0.9039],[0.52,-8531920.554,-10783274.2886,0.9074],[0.53,-8797798.374,-10990632.2157,0.9105],[0.54,-9068063.014,-11198011.5002,0.9141],[0.55,-9345309.714,-11405390.7847,0.9173],[0.56,-9635886.8341,-11612748.7118,0.9201],[0.57,-9909464.0941,-11820127.9963,0.923],[0.58,-10178953.4941,-12027485.9234,0.926],[0.59,-10441857.3141,-12234865.2079,0.9292],[0.6,-10707062.1541,-12442244.4924,0.9322],[0.61,-10963807.9741,-12649602.4195,0.9347],[0.62,-11227009.1741,-12856981.704,0.9375],[0.63,-11486182.7341,-13064339.6311,0.9403],[0.64,-11740704.9541,-13271718.9156,0.9426],[0.65,-11992540.4941,-13479098.2001,0.9451],[0.66,-12239994.2141,-13686456.1272,0.9476],[0.67,-12495623.3341,-13893835.4117,0.95],[0.68,-12747036.4141,-14101193.3388,0.9518],[0.69,-12998174.2941,-14308572.6233,0.9542],[0.7,-13245256.2341,-14515951.9077,0.9564],[0.71,-13491711.5942,-14723309.8349,0.9586],[0.72,-13733928.6142,-14930689.1194,0.9614],[0.73,-13978935.6742,-15138047.0465,0.9636],[0.74,-14225859.2942,-15345426.331,0.9656],[0.75,-14478730.8942,-15552805.6154,0.9677],[0.76,-14732341.6542,-15760163.5426,0.9695],[0.77,-14980951.8942,-15967542.8271,0.9717],[0.78,-15228815.4142,-16174900.7542,0.9736],[0.79,-15477260.2542,-16382280.0387,0.9754],[0.8,-15729162.2942,-16589659.3231,0.9772],[0.81,-15982245.5942,-16797017.2503,0.9791],[0.82,-16239106.4142,-17004396.5348,0.9807],[0.83,-16495974.8342,-17211754.4619,0.9825],[0.84,-16756091.8942,-17419133.7464,0.9843],[0.85,-17015231.8343,-17626513.0308,0.9858],[0.86,-17271465.6743,-17833870.958,0.9873],[0.87,-17532369.7943,-18041250.2425,0.9886],[0.88,-17794782.8543,-18248608.1696,0.99],[0.89,-18054635.5543,-18455987.4541,0.9912],[0.9,-18312649.1743,-18663366.7385,0.9925],[0.91,-18567492.6143,-18870724.6657,0.9936],[0.92,-18818659.8143,-19078103.9502,0.9944],[0.93,-19064059.2143,-19285461.8773,0.9954],[0.94,-19306798.9743,-19492841.1618,0.9963],[0.95,-19547236.6143,-19700220.4462,0.9971],[0.96,-19784938.9143,-19907578.3734,0.9979],[0.97,-20022956.6543,-20114957.6578,0.9985],[0.98,-20259835.3543,-20322315.585,0.9991],[0.99,-20497271.9743,-20529694.8695,0.9997],[1.0,-20737074.1543,-20737074.1539,1.0]],"0.2":[[0.01,1115750.1184,-138453.8475,0.1095],[0.02,2233653.1713,-276921.9554,0.1972],[0.03,3116551.5925,-415375.8029,0.2722],[0.04,3958202.5888,-553843.9108,0.3436],[0.05,4738066.892,-692312.0187,0.4115],[0.06,5400325.0528,-830765.8662,0.4716],[0.07,5876827.0773,-969233.9741,0.5193],[0.08,6173917.5714,-1107687.8216,0.5555],[0.09,6350758.0742,-1246155.9294,0.5846],[0.1,6444528.1036,-1384624.0373,0.6088],[0.11,6471921.953,-1523077.8848,0.6293],[0.12,6458550.0433,-1661545.9927,0.6477],[0.13,6417983.9445,-1799999.8402,0.6643],[0.14,6339850.1468,-1938467.9481,0.6785],[0.15,6270565.1468,-2076936.056,0.6935],[0.16,6163155.4268,-2215389.9035,0.7064],[0.17,6029906.0668,-2353858.0114,0.7177],[0.18,5866824.7468,-2492311.8589,0.727],[0.19,5687356.2268,-2630779.9668,0.7346],[0.2,5499925.7068,-2769248.0746,0.7426],[0.21,5296297.4668,-2907701.9222,0.7501],[0.22,5090055.9468,-3046170.03,0.7576],[0.23,4865096.0668,-3184623.8776,0.7641],[0.24,4652412.8268,-3323091.9854,0.7712],[0.25,4428408.5068,-3461560.0933,0.7777],[0.26,4192887.3068,-3600013.9408,0.7836],[0.27,3959404.7068,-3738482.0487,0.7897],[0.28,3718877.9068,-3876935.8962,0.7953],[0.29,3487577.5868,-4015404.0041,0.8014],[0.3,3253527.7068,-4153872.112,0.8074],[0.31,3012922.0268,-4292325.9595,0.8129],[0.32,2777618.9068,-4430794.0674,0.8189],[0.33,2531467.8668,-4569247.9149,0.824],[0.34,2288897.9468,-4707716.0228,0.8294],[0.35,2039616.2668,-4846184.1306,0.8345],[0.36,1795033.9068,-4984637.9781,0.8398],[0.37,1538423.5468,-5123106.086,0.8444],[0.38,1288511.8668,-5261559.9335,0.8494],[0.39,1034587.2668,-5400028.0414,0.8542],[0.4,778471.9068,-5538496.1493,0.8587],[0.41,523398.0667,-5676949.9968,0.8633],[0.42,273654.9067,-5815418.1047,0.8682],[0.43,13737.2667,-5953871.9522,0.872],[0.44,-239081.2533,-6092340.0601,0.8765],[0.45,-491193.1733,-6230808.168,0.8809],[0.46,-737152.9333,-6369262.0155,0.8854],[0.47,-991323.9333,-6507730.1233,0.8895],[0.48,-1239435.2933,-6646183.9709,0.8936],[0.49,-1482731.1733,-6784652.0787,0.8967],[0.5,-1732891.1333,-6923120.1866,0.9005],[0.51,-1967746.5333,-7061574.0341,0.9039],[0.52,-2212566.5733,-7200042.142,0.9074],[0.53,-2457378.2133,-7338495.9895,0.9105],[0.54,-2703699.2933,-7476964.0974,0.9141],[0.55,-2959291.6933,-7615432.2053,0.9173],[0.56,-3230359.9334,-7753886.0528,0.9201],[0.57,-3484511.2534,-7892354.1607,0.923],[0.58,-3733944.2534,-8030808.0082,0.926],[0.59,-3976686.6934,-8169276.1161,0.9292],[0.6,-4222036.9734,-8307744.2239,0.9322],[0.61,-4462461.0134,-8446198.0714,0.9347],[0.62,-4707606.8134,-8584666.1793,0.9375],[0.63,-4948459.3334,-8723120.0268,0.9403],[0.64,-5188654.9734,-8861588.1347,0.9426],[0.65,-5425133.8534,-9000056.2426,0.9451],[0.66,-5657248.8934,-9138510.0901,0.9476],[0.67,-5898449.9334,-9276978.198,0.95],[0.68,-6139026.2934,-9415432.0455,0.9518],[0.69,-6375383.4534,-9553900.1534,0.9542],[0.7,-6609475.1334,-9692368.2613,0.9564],[0.71,-6842812.0535,-9830822.1088,0.9586],[0.72,-7069293.0935,-9969290.2166,0.9614],[0.73,-7301961.8135,-10107744.0642,0.9636],[0.74,-7536496.0535,-10246212.172,0.9656],[0.75,-7777483.4535,-10384680.2799,0.9677],[0.76,-8020307.3735,-10523134.1274,0.9695],[0.77,-8256388.4535,-10661602.2353,0.9717],[0.78,-8493019.6935,-10800056.0828,0.9736],[0.79,-8730275.1735,-10938524.1907,0.9754],[0.8,-8971399.6535,-11076992.2986,0.9772],[0.81,-9212897.4535,-11215446.1461,0.9791],[0.82,-9459886.0935,-11353914.254,0.9807],[0.83,-9705177.1335,-11492368.1015,0.9825],[0.84,-9954214.4535,-11630836.2094,0.9843],[0.85,-10204116.7336,-11769304.3172,0.9858],[0.86,-10451487.0136,-11907758.1648,0.9873],[0.87,-10704360.4536,-12046226.2726,0.9886],[0.88,-10958373.3736,-12184680.1201,0.99],[0.89,-11211100.7736,-12323148.228,0.9912],[0.9,-11461794.2136,-12461616.3359,0.9925],[0.91,-11710053.4936,-12600070.1834,0.9936],[0.92,-11956650.2936,-12738538.2913,0.9944],[0.93,-12196829.6936,-12876992.1388,0.9954],[0.94,-12434826.2136,-13015460.2467,0.9963],[0.95,-12671109.8936,-13153928.3546,0.9971],[0.96,-12904766.6936,-13292382.2021,0.9979],[0.97,-13139909.3736,-13430850.31,0.9985],[0.98,-13373397.9736,-13569304.1575,0.9991],[0.99,-13607934.0136,-13707772.2653,0.9997],[1.0,-13846240.3736,-13846240.3732,1.0]],"0.3":[[0.01,1699637.746,-69549.7679,0.1095],[0.02,3431565.2593,-139106.6992,0.1972],[0.03,4824201.584,-208656.467,0.2722],[0.04,6162347.1522,-278213.3983,0.3436],[0.05,7413123.9092,-347770.3296,0.4115],[0.06,8498703.3677,-417320.0975,0.4716],[0.07,9323506.5576,-486877.0288,0.5193],[0.08,9895830.2124,-556426.7967,0.5555],[0.09,10299262.2911,-625983.728,0.5846],[0.1,10583637.7625,-695540.6593,0.6088],[0.11,10771287.4891,-765090.4271,0.6293],[0.12,10896128.1033,-834647.3584,0.6477],[0.13,10978249.9802,-904197.1263,0.6643],[0.14,10999839.7875,-973754.0576,0.6785],[0.15,11039606.3875,-1043310.9889,0.6935],[0.16,11030082.1075,-1112860.7567,0.7064],[0.17,10981219.2675,-1182417.688,0.7177],[0.18,10885338.4875,-1251967.4559,0.727],[0.19,10756044.6075,-1321524.3872,0.7346],[0.2,10626900.0275,-1391081.3185,0.7426],[0.21,10477102.1675,-1460631.0864,0.7501],[0.22,10327522.5875,-1530188.0177,0.7576],[0.23,10151191.0675,-1599737.7855,0.7641],[0.24,9991839.4075,-1669294.7168,0.7712],[0.25,9816350.9275,-1738851.6481,0.7777],[0.26,9624500.8275,-1808401.416,0.7836],[0.27,9435982.7275,-1877958.3473,0.7897],[0.28,9236328.5275,-1947508.1152,0.7953],[0.29,9049808.8475,-2017065.0465,0.8014],[0.3,8859776.3275,-2086621.9778,0.8074],[0.31,8660386.6075,-2156171.7456,0.8129],[0.32,8468501.1275,-2225728.6769,0.8189],[0.33,8259969.4675,-2295278.4448,0.824],[0.34,8057748.9875,-2364835.3761,0.8294],[0.35,7845420.2675,-2434392.3074,0.8345],[0.36,7639642.2274,-2503942.0752,0.8398],[0.37,7416418.9874,-2573499.0065,0.8444],[0.38,7202656.9674,-2643048.7744,0.8494],[0.39,6982990.0674,-2712605.7057,0.8542],[0.4,6759794.9274,-2782162.637,0.8587],[0.41,6538147.0674,-2851712.4049,0.8633],[0.42,6323313.5274,-2921269.3362,0.8682],[0.43,6091114.6674,-2990819.104,0.872],[0.44,5870194.9874,-3060376.0353,0.8765],[0.45,5648436.2074,-3129932.9666,0.8809],[0.46,5434628.1674,-3199482.7345,0.8854],[0.47,5208903.2674,-3269039.6658,0.8895],[0.48,4988370.3274,-3338589.4337,0.8936],[0.49,4766083.2074,-3408146.365,0.8967],[0.5,4541170.0674,-3477703.2963,0.9005],[0.51,4328517.0674,-3547253.0641,0.9039],[0.52,4106787.4073,-3616809.9954,0.9074],[0.53,3883041.9473,-3686359.7633,0.9105],[0.54,3660664.4273,-3755916.6946,0.9141],[0.55,3426726.3273,-3825473.6259,0.9173],[0.56,3175166.9673,-3895023.3938,0.9201],[0.57,2940441.5873,-3964580.3251,0.923],[0.58,2711064.9873,-4034130.0929,0.926],[0.59,2488483.9273,-4103687.0242,0.9292],[0.6,2262988.2073,-4173243.9555,0.9322],[0.61,2038885.9473,-4242793.7234,0.9347],[0.62,1811795.5473,-4312350.6547,0.9375],[0.63,1589264.0673,-4381900.4225,0.9403],[0.64,1363395.0073,-4451457.3538,0.9426],[0.65,1142272.7873,-4521014.2851,0.9451],[0.66,925496.4272,-4590564.053,0.9476],[0.67,698723.4672,-4660120.9843,0.95],[0.68,468983.8272,-4729670.7522,0.9518],[0.69,247407.3872,-4799227.6835,0.9542],[0.7,26305.9672,-4868784.6148,0.9564],[0.71,-193912.5128,-4938334.3826,0.9586],[0.72,-404657.5728,-5007891.3139,0.9614],[0.73,-624987.9528,-5077441.0818,0.9636],[0.74,-847132.8128,-5146998.0131,0.9656],[0.75,-1076236.0128,-5216554.9444,0.9677],[0.76,-1308273.0928,-5286104.7123,0.9695],[0.77,-1531825.0128,-5355661.6436,0.9717],[0.78,-1757223.9728,-5425211.4114,0.9736],[0.79,-1983290.0928,-5494768.3427,0.9754],[0.8,-2213637.0129,-5564325.274,0.9772],[0.81,-2443549.3129,-5633875.0419,0.9791],[0.82,-2680665.7729,-5703431.9732,0.9807],[0.83,-2914379.4329,-5772981.741,0.9825],[0.84,-3152337.0129,-5842538.6723,0.9843],[0.85,-3393001.6329,-5912095.6036,0.9858],[0.86,-3631508.3529,-5981645.3715,0.9873],[0.87,-3876351.1129,-6051202.3028,0.9886],[0.88,-4121963.8929,-6120752.0707,0.99],[0.89,-4367565.9929,-6190309.002,0.9912],[0.9,-4610939.2529,-6259865.9333,0.9925],[0.91,-4852614.3729,-6329415.7011,0.9936],[0.92,-5094640.7729,-6398972.6324,0.9944],[0.93,-5329600.1729,-6468522.4003,0.9954],[0.94,-5562853.453,-6538079.3316,0.9963],[0.95,-5794983.173,-6607636.2629,0.9971],[0.96,-6024594.473,-6677186.0308,0.9979],[0.97,-6256862.093,-6746742.9621,0.9985],[0.98,-6486960.593,-6816292.7299,0.9991],[0.99,-6718596.053,-6885849.6612,0.9997],[1.0,-6955406.593,-6955406.5925,1.0]]},"groups":{"auto_renew":{"no tx":[2524,0.5468],"off":[114482,0.4139],"on":[853954,0.0452]},"cancelled_last":{"no":[959102,0.0815],"no tx":[2524,0.5468],"yes":[9334,0.8305]},"expire":{"<=0":[16994,0.4973],"1-15":[390958,0.0799],"16-31":[474835,0.0672],">31":[85647,0.1678]},"gender":{"female":[184344,0.1299],"male":[204561,0.129],"unknown":[472062,0.0659]},"idle":{"0":[438062,0.0958],"1-3":[185745,0.0897],"4-7":[67262,0.0899],"8-14":[37248,0.1004],"15+":[54169,0.0949],"no logs":[188474,0.0732]},"plan":{"1-7":[2081,0.9236],"8-30":[942277,0.068],">30":[24072,0.8272]},"registered_via":{"3.0":[106459,0.1723],"4.0":[52744,0.231],"7.0":[462684,0.0447],"9.0":[235689,0.1268],"13.0":[3391,0.0988]},"tenure_y":{"0.0":[181964,0.086],"1.0":[186784,0.0878],"2.0":[83045,0.1153],"3.0":[113915,0.0968],"4.0":[74918,0.1048],"5.0":[66558,0.083],"6.0":[48099,0.1132],"7.0":[16187,0.109],"8.0":[16647,0.1039],"9.0":[25817,0.092],"10.0":[45976,0.0783]},"trend":{"falling fast":[98616,0.0938],"falling":[192140,0.0925],"flat":[240690,0.0865],"rising":[141284,0.0829],"rising fast":[109756,0.1273]}},"models":[{"model":"Baseline (prior)","roc_auc":0.5,"pr_auc":0.0899,"precision@10%":0.0874,"recall@10%":0.0972,"lift@10%":0.9718},{"model":"Logistic regression","roc_auc":0.8372,"pr_auc":0.5625,"precision@10%":0.5329,"recall@10%":0.5925,"lift@10%":5.9251},{"model":"Decision tree (depth 6)","roc_auc":0.8043,"pr_auc":0.53,"precision@10%":0.5398,"recall@10%":0.6001,"lift@10%":6.0011},{"model":"Random forest","roc_auc":0.8672,"pr_auc":0.5955,"precision@10%":0.5442,"recall@10%":0.605,"lift@10%":6.0504},{"model":"LightGBM","roc_auc":0.8701,"pr_auc":0.6031,"precision@10%":0.5476,"recall@10%":0.6088,"lift@10%":6.0881}],"prior":0.0899,"assume":{"contact_cost_ntd":5.0,"discount_share_of_month":0.2,"value_months":6.0,"success_rates":[0.1,0.2,0.3]}};
+const PRIOR = D.prior;
+const pct = (x, d = 1) => (x * 100).toFixed(d).replace('.', ',') + '%';
+const fmt = n => Math.round(n).toLocaleString('vi-VN');
+const mil = v => (v / 1e6).toFixed(1).replace('.', ',') + ' triệu';
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const SEG = Object.fromEntries(D.segments.map(s => [s.cluster, s]));
+const ITEM = {
+  'active=low': 'ít ngày nghe', 'auto_renew=off': 'tắt tự gia hạn', 'cancelled_before': 'từng hủy gói',
+  'expired_at_T': 'gói đã hết hạn', 'expires<=31d': 'gói hết hạn trong 31 ngày', 'expires>31d': 'gói còn hơn 31 ngày',
+  'gender=female': 'giới tính nữ', 'gender=unknown': 'không khai giới tính', 'no_logs': 'không nghe bài nào',
+  'plan>30d': 'gói dài hơn 30 ngày', 'skip=high': 'hay bỏ qua bài', 'tenure1-3y': 'thâm niên 1–3 năm',
+  'tenure<1y': 'thâm niên dưới 1 năm', 'tenure>6y': 'thâm niên trên 6 năm', 'trend=falling': 'nghe giảm dần',
+  'trend=rising': 'nghe tăng', 'via=3': 'đăng ký qua kênh 3', 'via=4': 'đăng ký qua kênh 4', 'via=7': 'đăng ký qua kênh 7', 'via=9': 'đăng ký qua kênh 9'
+};
+const itemVi = it => it.startsWith('segment=') ? 'nhóm “' + SEG[+it.slice(8)].name + '”' : (ITEM[it] || it);
+const ruleVi = r => r.items.map(itemVi).join(' + ');
+const level = p => p >= 0.5 ? ['hi', 'Rất cao'] : p >= 0.2 ? ['hi', 'Cao'] : p > PRIOR * 1.15 ? ['mid', 'Trên mức chung'] : p < PRIOR * 0.85 ? ['lo', 'Thấp'] : ['base', 'Ngang mức chung'];
+const frac = p => { const k = Math.round(p * 10); return k >= 1 ? `Cứ 10 người thì khoảng ${k} người bỏ đi` : `Khoảng ${Math.max(1, Math.round(p * 100))} trên 100 người bỏ đi`; };
+
+const ACTIONS = {
+  0: 'Theo dõi phản ứng sau khi hết khuyến mãi; nhắc gia hạn khi ưu đãi sắp hết.',
+  1: 'Ưu tiên mời bật tự gia hạn: họ nghe nhiều, chỉ là chưa bật.',
+  2: 'Giữ nguyên trải nghiệm, không cần ưu đãi tốn kém.',
+  3: 'Nhắc sớm trước khi hết gói, tặng ưu đãi chuyển sang gói tháng tự gia hạn.',
+  4: 'Chào mừng, gợi ý nội dung để giữ đà nghe, mời bật tự gia hạn.',
+  5: 'Gửi gợi ý bài hát để kéo khách nghe lại; rủi ro chưa cao.',
+  6: 'Hỏi lý do đổi hoặc hủy gói, đề xuất gói phù hợp.',
+  7: 'Đang trả tiền nhưng không nghe: nhắc giá trị dịch vụ trước kỳ gia hạn.'
+};
+
+/* ---------- routing ---------- */
+const VIEWS = ['kiem-tra', 'chuoi', 'nhom', 'quy-tac', 'goi-dien', 'mo-ta'];
+function route() {
+  const h = location.hash.slice(1); const v = VIEWS.includes(h) ? h : 'kiem-tra';
+  VIEWS.forEach(x => { document.getElementById('v-' + x).hidden = x !== v; });
+  document.querySelectorAll('nav a').forEach(a => { if (a.getAttribute('href') === '#' + v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+}
+addEventListener('hashchange', route);
+
+/* ---------- 1. single customer ---------- */
+const $ = id => document.getElementById(id);
+const segSel = $('i-seg');
+segSel.innerHTML = '<option value="">Chưa biết</option>' + D.segments.filter(s => s.cluster !== 7).map(s => `<option value="${s.cluster}">${esc(s.name)}</option>`).join('');
+const PRESETS = {
+  risky: { renew: 'off', plan: 'long', via: '9', tenure: 'tenure1-3y', cancel: 'no', expire: 'expires>31d', active: 'high', trend: 'flat', skip: 'no', gender: 'unknown', seg: '3' },
+  loyal: { renew: 'on', plan: '30', via: '7', tenure: 'tenure>6y', cancel: 'no', expire: 'expires<=31d', active: 'high', trend: 'flat', skip: 'no', gender: 'unknown', seg: '2' },
+  manual: { renew: 'off', plan: '30', via: '9', tenure: 'tenure1-3y', cancel: 'no', expire: 'expires<=31d', active: 'high', trend: 'flat', skip: 'no', gender: 'female', seg: '1' },
+  silent: { renew: 'on', plan: '30', via: '7', tenure: 'tenure3-6y', cancel: 'no', expire: 'expires<=31d', active: 'none', trend: 'flat', skip: 'no', gender: 'unknown', seg: '' }
+};
+function setPreset(k) { const p = PRESETS[k]; for (const f in p) $('i-' + f).value = p[f]; checkUser(); }
+document.querySelectorAll('[data-preset]').forEach(b => b.addEventListener('click', () => setPreset(b.dataset.preset)));
+$('f-user').addEventListener('change', checkUser);
+$('f-user').addEventListener('submit', e => e.preventDefault());
+
+function userItems() {
+  const v = id => $('i-' + id).value; const s = new Set();
+  if (v('renew') === 'off') s.add('auto_renew=off');
+  if (v('plan') === 'long') s.add('plan>30d');
+  s.add('via=' + v('via')); s.add(v('tenure')); s.add(v('expire'));
+  if (v('cancel') === 'yes') s.add('cancelled_before');
+  if (v('gender') !== 'male') s.add('gender=' + v('gender'));
+  const noLogs = v('active') === 'none';
+  $('i-trend').disabled = noLogs; $('i-skip').disabled = noLogs; $('i-seg').disabled = noLogs;
+  if (noLogs) { s.add('no_logs'); s.add('segment=7'); }
+  else {
+    if (v('active') === 'low') s.add('active=low');
+    if (v('trend') !== 'flat') s.add('trend=' + v('trend'));
+    if (v('skip') === 'yes') s.add('skip=high');
+    if (v('seg') !== '') s.add('segment=' + v('seg'));
+  }
+  return s;
+}
+function groupBars() {
+  const v = id => $('i-' + id).value; const G = D.groups; const rows = [];
+  rows.push(['Tự gia hạn ' + (v('renew') === 'on' ? 'bật' : 'tắt'), G.auto_renew[v('renew')]]);
+  rows.push(['Gói ' + { short: 'dưới 8 ngày', '30': '8–30 ngày', long: 'trên 30 ngày' }[v('plan')], G.plan[{ short: '1-7', '30': '8-30', long: '>30' }[v('plan')]]]);
+  rows.push(['Kênh ' + v('via'), G.registered_via[v('via') + '.0']]);
+  rows.push(['Hết hạn: ' + { 'expires<=31d': 'trong 31 ngày', 'expires>31d': 'sau 31 ngày', 'expired_at_T': 'đã hết' }[v('expire')], G.expire[{ 'expires<=31d': '16-31', 'expires>31d': '>31', 'expired_at_T': '<=0' }[v('expire')]]]);
+  rows.push(['Giới tính: ' + { unknown: 'không khai', female: 'nữ', male: 'nam' }[v('gender')], G.gender[v('gender')]]);
+  return rows.filter(r => r[1]);
+}
+function barRow(label, rate, color, n) {
+  return `<div class="bar"><span>${esc(label)}</span><div class="track" title="${pct(rate)}"><div class="fill" style="width:${Math.min(100, rate * 100)}%;background:${color}"></div><div class="base-mark" style="left:${PRIOR * 100}%"></div></div><span class="num" style="text-align:right">${pct(rate)}</span></div>`;
+}
+function checkUser() {
+  const items = userItems();
+  const hit = D.rules.filter(r => r.items.every(i => items.has(i)));
+  const churn = hit.filter(r => r.dir === 'churn').sort((a, b) => b.conf - a.conf);
+  const retain = hit.filter(r => r.dir === 'retain').sort((a, b) => a.conf - b.conf);
+  let p, src;
+  if (churn.length) { p = churn[0].conf; src = 'theo quy tắc rủi ro mạnh nhất khớp với khách này'; }
+  else if (retain.length) { p = retain[0].conf; src = 'theo quy tắc an toàn khớp với khách này'; }
+  else { const g = D.groups.auto_renew[$('i-renew').value]; p = g[1]; src = 'không khớp quy tắc nào, dùng tỉ lệ của nhóm cùng trạng thái tự gia hạn'; }
+  const [lv, lvName] = level(p);
+  const segId = items.has('segment=7') ? 7 : ($('i-seg').value === '' ? null : +$('i-seg').value);
+  const seg = segId === null ? null : SEG[segId];
+  const actions = [];
+  if (items.has('plan>30d')) actions.push(ACTIONS[3]);
+  else if (items.has('auto_renew=off')) actions.push('Mời bật tự gia hạn, có thể kèm ưu đãi nhỏ cho tháng đầu.');
+  if (seg && !actions.includes(ACTIONS[segId])) actions.push(ACTIONS[segId]);
+  if (items.has('cancelled_before')) actions.push('Từng hủy gói: hỏi lý do và đề xuất gói phù hợp hơn.');
+  if (!actions.length) actions.push('Không cần can thiệp tốn kém; giữ trải nghiệm tốt.');
+  const callList = p >= 0.2;
+  $('out-user').innerHTML = `
+    <div class="verdict v-${lv}">
+      <span class="pill p-${lv}">Rủi ro: ${lvName}</span>
+      <span class="big">${pct(p)}</span>
+      <p><b>${frac(p)}</b> trong số khách giống như vậy. Mức chung là ${pct(PRIOR)}.</p>
+      <p class="small muted">Ước tính ${src}; đo trên dữ liệu để riêng.</p>
+    </div>
+    <div class="row"><span class="pill ${callList ? 'p-hi' : 'p-lo'}">${callList ? 'Đưa vào danh sách gọi tháng này' : 'Chưa cần gọi'}</span>
+      ${seg ? `<span class="pill p-base">Nhóm: ${esc(seg.name)} · bỏ đi ${pct(seg.churn_rate)}</span>` : ''}</div>
+    <h3>Quy tắc khớp (${hit.length})</h3>
+    ${hit.length ? `<ul class="clean">${churn.concat(retain).slice(0, 6).map(r => `<li class="rule"><span>Nếu khách <b>${esc(ruleVi(r))}</b></span><span class="pill ${r.dir === 'churn' ? 'p-hi' : 'p-lo'} num">${pct(r.conf)} bỏ đi</span><span class="small muted">gấp ${String(r.lift.toFixed(1)).replace('.', ',')} lần mức chung · ${pct(r.sup)} khách có đặc điểm này</span></li>`).join('')}</ul>${hit.length > 6 ? `<p class="small muted">và ${hit.length - 6} quy tắc khác.</p>` : ''}` : '<p class="muted">Không có quy tắc nào khớp hoàn toàn.</p>'}
+    <h3>Nên làm gì</h3>
+    <ul class="clean">${actions.map(a => `<li>• ${esc(a)}</li>`).join('')}</ul>
+    <h3>Từng đặc điểm riêng lẻ</h3>
+    <div class="bars">${groupBars().map(([l, g]) => barRow(l, g[1], g[1] > PRIOR ? 'var(--accent)' : 'var(--calm)')).join('')}</div>
+    <p class="small muted">Tỉ lệ bỏ đi của tất cả khách có cùng đặc điểm đó; vạch đen là mức chung ${pct(PRIOR)}.</p>`;
+}
+
+/* ---------- 2. sequences ---------- */
+const PAYS = { PAY_AUTO: 'Trả tự động', PAY_MANUAL: 'Trả tay', CANCEL: 'Hủy gói' };
+const PLANS = { PLAN_30: 'Gói 30 ngày', PLAN_LONG: 'Gói dài', PLAN_SHORT: 'Gói ngắn', NONE: 'Không rõ gói' };
+const TOK = { PAY_AUTO: 'trả tự động', PAY_MANUAL: 'trả tay', CANCEL: 'hủy', FREE: 'miễn phí', PLAN_30: 'gói 30 ngày', PLAN_LONG: 'gói dài', PLAN_SHORT: 'gói ngắn', PLAN_CHANGE: 'đổi gói', METHOD_CHANGE: 'đổi cách trả', GAP: 'ngắt quãng trên 30 ngày' };
+let txs = [];
+const SEQS = {
+  long: [{ pay: 'PAY_MANUAL', plan: 'PLAN_30' }, { pay: 'PAY_MANUAL', plan: 'PLAN_LONG' }, { pay: 'PAY_MANUAL', plan: 'PLAN_LONG' }],
+  cancel: [{ pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'CANCEL', plan: 'PLAN_30' }, { pay: 'PAY_MANUAL', plan: 'PLAN_SHORT' }],
+  auto: [{ pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'PAY_AUTO', plan: 'PLAN_30' }, { pay: 'PAY_AUTO', plan: 'PLAN_30' }]
+};
+function tokens() {
+  let prevPlan = null;
+  return txs.map((t, i) => {
+    const s = new Set([t.pay]);
+    if (t.plan !== 'NONE') s.add(t.plan);
+    if (t.free && t.pay !== 'CANCEL') s.add('FREE');
+    if (t.method && i > 0) s.add('METHOD_CHANGE');
+    if (t.gap && i > 0) s.add('GAP');
+    if (t.plan !== 'NONE') { if (prevPlan && prevPlan !== t.plan) s.add('PLAN_CHANGE'); prevPlan = t.plan; }
+    return s;
+  });
+}
+function matches(pattern, seq) { let j = 0; for (const s of seq) { if (j < pattern.length && pattern[j].every(x => s.has(x))) j++; } return j === pattern.length; }
+function renderTx() {
+  $('tx-list').innerHTML = txs.map((t, i) => `
+    <div class="tx">
+      <span class="num muted">${i + 1}</span>
+      <select aria-label="Loại giao dịch ${i + 1}" data-i="${i}" data-k="pay">${Object.entries(PAYS).map(([k, v]) => `<option value="${k}" ${t.pay === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <select aria-label="Độ dài gói ${i + 1}" data-i="${i}" data-k="plan">${Object.entries(PLANS).map(([k, v]) => `<option value="${k}" ${t.plan === k ? 'selected' : ''}>${v}</option>`).join('')}</select>
+      <button type="button" data-del="${i}" aria-label="Xóa giao dịch ${i + 1}">Xóa</button>
+      <div class="flags">
+        <label><input type="checkbox" data-i="${i}" data-k="free" ${t.free ? 'checked' : ''}> Miễn phí</label>
+        ${i > 0 ? `<label><input type="checkbox" data-i="${i}" data-k="method" ${t.method ? 'checked' : ''}> Đổi cách thanh toán</label>
+        <label><input type="checkbox" data-i="${i}" data-k="gap" ${t.gap ? 'checked' : ''}> Cách lần trước hơn 30 ngày</label>` : ''}
+      </div>
+    </div>`).join('') || '<p class="muted">Chưa có giao dịch. Bấm “Thêm giao dịch”.</p>';
+  checkSeq();
+}
+$('tx-list').addEventListener('change', e => { const el = e.target; const i = +el.dataset.i; if (isNaN(i)) return; txs[i][el.dataset.k] = el.type === 'checkbox' ? el.checked : el.value; checkSeq(); });
+$('tx-list').addEventListener('click', e => { const d = e.target.dataset.del; if (d !== undefined) { txs.splice(+d, 1); renderTx(); } });
+$('tx-add').addEventListener('click', () => { const last = txs[txs.length - 1]; txs.push({ pay: last ? last.pay : 'PAY_AUTO', plan: last ? last.plan : 'PLAN_30' }); renderTx(); });
+$('tx-clear').addEventListener('click', () => { txs = []; renderTx(); });
+document.querySelectorAll('[data-seq]').forEach(b => b.addEventListener('click', () => { txs = SEQS[b.dataset.seq].map(t => ({ ...t })); renderTx(); }));
+function checkSeq() {
+  const seq = tokens();
+  const hit = D.seqs.filter(p => matches(p.steps, seq));
+  const risk = hit.filter(p => p.dir === 'churn').sort((a, b) => b.conf - a.conf);
+  const safe = hit.filter(p => p.dir === 'retain').sort((a, b) => a.conf - b.conf);
+  const top = risk[0] || safe[0];
+  const stepVi = st => st.map(x => TOK[x] || x).join(' + ');
+  let head;
+  if (!seq.length) head = '<p class="muted">Thêm vài giao dịch để xem kết quả.</p>';
+  else if (!top) head = `<div class="verdict v-base"><span class="pill p-base">Không khớp mẫu nào</span><p>Lịch sử này không chứa chuỗi nào trong 30 mẫu đã kiểm định. Mức chung là ${pct(PRIOR)}.</p></div>`;
+  else { const [lv, nm] = level(top.conf); head = `<div class="verdict v-${lv}"><span class="pill p-${lv}">${top.dir === 'churn' ? 'Cảnh báo' : 'An toàn'}: ${nm}</span><span class="big">${pct(top.conf)}</span><p><b>${frac(top.conf)}</b> trong số khách có chuỗi “${esc(top.steps.map(stepVi).join(' → '))}”.</p><p class="small muted">Chuỗi mạnh nhất khớp; đo trên dữ liệu để riêng.</p></div>`; }
+  $('out-seq').innerHTML = `${head}
+    ${seq.length ? `<h3>Máy đọc lịch sử thành</h3><div class="chips">${seq.map((s, i) => `<span class="chip ${[...s].some(x => ['CANCEL', 'PAY_MANUAL', 'PLAN_LONG', 'PLAN_CHANGE', 'GAP', 'METHOD_CHANGE'].includes(x)) ? 'warn' : ''}">${i + 1}. ${esc([...s].map(x => TOK[x]).join(', '))}</span>`).join('')}</div>` : ''}
+    ${hit.length ? `<h3>Các mẫu khớp (${hit.length})</h3><ul class="clean">${risk.concat(safe).slice(0, 6).map(p => `<li class="rule"><span>${esc(p.steps.map(stepVi).join(' → '))}</span><span class="pill ${p.dir === 'churn' ? 'p-hi' : 'p-lo'} num">${pct(p.conf)}</span><span class="small muted">gấp ${p.lift.toFixed(1).replace('.', ',')} lần mức chung · ${pct(p.sup)} khách có chuỗi này</span></li>`).join('')}</ul>` : ''}
+    <p class="note">Điểm mạnh của mẫu tuần tự: các bước này xảy ra ngay lúc khách giao dịch, nên có thể báo động trong ngày thay vì chờ cuối tháng.</p>`;
+}
+
+/* ---------- 3. segments ---------- */
+$('seg-grid').innerHTML = D.segments.slice().sort((a, b) => b.churn_rate - a.churn_rate).map(s => {
+  const [lv, nm] = level(s.churn_rate);
+  return `<article class="seg">
+    <div class="row" style="justify-content:space-between"><span class="pill p-${lv}">${nm}</span><span class="small muted num">${pct(s.share)} khách</span></div>
+    <h3>${esc(s.name)}</h3>
+    <span class="rate" style="color:var(--${lv === 'base' ? 'calm' : lv})">${pct(s.churn_rate)} <span class="small muted" style="font-family:var(--f-body);font-weight:500">bỏ đi</span></span>
+    <div class="track"><div class="fill" style="width:${s.churn_rate * 100}%;background:var(--${lv === 'base' ? 'calm' : lv})"></div><div class="base-mark" style="left:${PRIOR * 100}%"></div></div>
+    <div class="kv"><span>Số khách</span><span>${fmt(s.n)}</span><span>Bật tự gia hạn</span><span>${pct(s.auto_renew_rate, 0)}</span><span>Ngày nghe / 60 ngày</span><span>${s.active_days.toFixed(0)}</span><span>Gói gần nhất (ngày)</span><span>${s.last_plan_days.toFixed(0)}</span></div>
+    <p class="small"><b>Nên làm:</b> ${esc(ACTIONS[s.cluster])}</p>
+  </article>`;
+}).join('');
+
+/* ---------- 4. rules ---------- */
+let rf = 'churn';
+function renderRules() {
+  const rs = D.rules.filter(r => r.dir === rf).sort((a, b) => rf === 'churn' ? b.conf - a.conf : a.conf - b.conf);
+  $('rule-table').innerHTML = `<thead><tr><th>Nếu khách…</th><th class="r">Bỏ đi</th><th class="r">So với mức chung</th><th class="r">Khách có</th></tr></thead><tbody>${rs.map(r => `<tr><td>${esc(ruleVi(r))}</td><td class="r num">${pct(r.conf)}</td><td class="r num">${r.lift >= 1 ? 'gấp ' + r.lift.toFixed(1).replace('.', ',') : r.lift.toFixed(2).replace('.', ',') + '×'}</td><td class="r num">${pct(r.sup)}</td></tr>`).join('')}</tbody>`;
+  document.querySelectorAll('[data-rf]').forEach(b => b.classList.toggle('primary', b.dataset.rf === rf));
+}
+document.querySelectorAll('[data-rf]').forEach(b => b.addEventListener('click', () => { rf = b.dataset.rf; renderRules(); }));
+function renderCov() {
+  const k = +$('i-topk').value; $('topk-v').textContent = k;
+  const c = D.coverage.find(x => x.top_k_rules === k) || D.coverage[D.coverage.length - 1];
+  $('cov-stats').innerHTML = `
+    <div class="stat"><span class="small muted">Khách bị đánh dấu</span><span class="n">${pct(c.share_users_flagged)}</span></div>
+    <div class="stat"><span class="small muted">Người sắp đi được bắt</span><span class="n" style="color:var(--accent)">${pct(c.share_churners_covered)}</span></div>
+    <div class="stat"><span class="small muted">Bị đánh dấu mà bỏ đi thật</span><span class="n">${pct(c.churn_rate_in_flagged)}</span></div>`;
+}
+$('i-topk').max = D.coverage.length; $('i-topk').addEventListener('input', renderCov);
+
+/* ---------- 5. profit ---------- */
+let sr = '0.2';
+function renderProfit() {
+  const share = +$('i-share').value; $('share-v').textContent = share + '%';
+  const curve = D.profit[sr]; const pt = curve[Math.min(curve.length, share) - 1];
+  const best = curve.reduce((a, b) => b[1] > a[1] ? b : a);
+  $('profit-stats').innerHTML = `
+    <div class="stat"><span class="small muted">Lãi ròng</span><span class="n" style="color:var(--${pt[1] >= 0 ? 'lo' : 'hi'})">${mil(pt[1])}</span><span class="small muted">NTD mỗi tháng</span></div>
+    <div class="stat"><span class="small muted">Nếu chọn ngẫu nhiên</span><span class="n" style="color:var(--${pt[2] >= 0 ? 'lo' : 'hi'})">${mil(pt[2])}</span><span class="small muted">NTD</span></div>
+    <div class="stat"><span class="small muted">Người sắp đi được gọi tới</span><span class="n">${pct(pt[3], 0)}</span></div>
+    <div class="stat"><span class="small muted">Lãi nhiều nhất khi gọi</span><span class="n">${pct(best[0], 0)}</span><span class="small muted">${mil(best[1])} NTD</span></div>`;
+  const W = 560, H = 300, L = 62, R = 14, T = 14, B = 40;
+  const ys = curve.flatMap(r => [r[1], r[2]]); const ymin = Math.min(...ys), ymax = Math.max(...ys);
+  const X = x => L + (x - 0.01) / 0.99 * (W - L - R), Y = y => T + (ymax - y) / (ymax - ymin) * (H - T - B);
+  const line = i => curve.map((r, j) => (j ? 'L' : 'M') + X(r[0]).toFixed(1) + ' ' + Y(r[i]).toFixed(1)).join(' ');
+  const step = Math.pow(10, Math.floor(Math.log10((ymax - ymin) / 4))); const st = Math.ceil((ymax - ymin) / 4 / step) * step;
+  let ticks = ''; for (let v = Math.ceil(ymin / st) * st; v <= ymax; v += st) ticks += `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}" stroke="var(--line)" stroke-width="${v === 0 ? 1.6 : 1}"/><text x="${L - 8}" y="${Y(v) + 4}" text-anchor="end">${(v / 1e6).toFixed(st < 1e6 ? 1 : 0).replace('.', ',')}</text>`;
+  let xt = ''; [0.01, 0.25, 0.5, 0.75, 1].forEach(v => xt += `<text x="${X(v)}" y="${H - 18}" text-anchor="middle">${Math.round(v * 100)}%</text>`);
+  $('profit-chart').innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Lãi ròng theo tỉ lệ khách được gọi">${ticks}${xt}
+    <text x="${(L + W - R) / 2}" y="${H - 2}" text-anchor="middle">tỉ lệ khách được gọi</text>
+    <path d="${line(2)}" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4"/>
+    <path d="${line(1)}" fill="none" stroke="var(--accent)" stroke-width="2.5"/>
+    <line x1="${X(pt[0])}" x2="${X(pt[0])}" y1="${T}" y2="${H - B}" stroke="var(--ink)" stroke-opacity=".35"/>
+    <circle cx="${X(pt[0])}" cy="${Y(pt[1])}" r="5" fill="var(--accent)" stroke="var(--panel)" stroke-width="2"/></svg>`;
+  document.querySelectorAll('[data-sr]').forEach(b => b.classList.toggle('primary', b.dataset.sr === sr));
+}
+$('i-share').addEventListener('input', renderProfit);
+document.querySelectorAll('[data-sr]').forEach(b => b.addEventListener('click', () => { sr = b.dataset.sr; renderProfit(); }));
+const A = D.assume;
+$('assume').textContent = `Giả định: mỗi cuộc gọi tốn ${A.contact_cost_ntd} NTD; ưu đãi bằng ${A.discount_share_of_month * 100}% phí tháng (149 NTD) cho mọi người được gọi; giữ được một khách mang lại ${A.value_months} tháng phí. Ưu đãi cũng bị dùng bởi người vốn không định đi, nên gọi quá nhiều sẽ lỗ.`;
+
+/* ---------- 6. description ---------- */
+const lgb = D.models.find(m => m.model === 'LightGBM');
+$('parts').innerHTML = [
+  ['Chia nhóm khách', '8 kiểu khách có tên dễ hiểu, từ “Trung thành” (3% bỏ đi) đến “Mua gói dài, trả tay” (84%).', '#nhom'],
+  ['Bộ quy tắc “nếu… thì…”', '25 quy tắc báo rủi ro và 9 quy tắc báo an toàn, mỗi quy tắc 1–3 điều kiện.', '#quy-tac'],
+  ['Cảnh báo theo chuỗi', '30 chuỗi giao dịch đã kiểm định, dùng để báo động ngay khi khách giao dịch.', '#chuoi'],
+  ['Chấm điểm và danh sách gọi', 'Mô hình LightGBM xếp hạng khách, kèm đường lãi lỗ để chọn số khách cần gọi.', '#goi-dien']
+].map(([t, d, h]) => `<a class="seg" href="${h}" style="text-decoration:none;color:inherit"><h3>${t}</h3><p class="small muted">${d}</p><span class="small" style="color:var(--accent);font-weight:600">Xem trong demo →</span></a>`).join('');
+const c5 = D.coverage.find(x => x.top_k_rules === 5);
+$('quality').innerHTML = `
+  <div class="stat"><span class="small muted">Điểm xếp hạng ROC-AUC</span><span class="n">${lgb.roc_auc.toFixed(3).replace('.', ',')}</span><span class="small muted">học tháng 2, thi tháng 3</span></div>
+  <div class="stat"><span class="small muted">Gọi 10% rủi ro nhất bắt được</span><span class="n">${pct(lgb['recall@10%'], 0)}</span><span class="small muted">người sắp đi (ngẫu nhiên: 10%)</span></div>
+  <div class="stat"><span class="small muted">5 quy tắc đầu bắt được</span><span class="n">${pct(c5.share_churners_covered, 0)}</span><span class="small muted">khi đánh dấu ${pct(c5.share_users_flagged)} khách</span></div>
+  <div class="stat"><span class="small muted">Quy tắc lặp lại ở tháng 2</span><span class="n">33/34</span><span class="small muted">vẫn đúng chiều</span></div>`;
+
+setPreset('risky'); txs = SEQS.long.map(t => ({ ...t })); renderTx(); renderRules(); renderCov(); renderProfit(); route();
+</script>
+
+</html>

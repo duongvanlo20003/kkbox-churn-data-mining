@@ -87,6 +87,7 @@ Chỉ chạy một bước: `python mining/02_association_rules.py`.
 | `report/*.csv` | Bảng kết quả (phân khúc, luật, mẫu tuần tự, kết quả mô hình…) |
 | `report/metrics/*.json` | Các chỉ số tóm tắt của từng bước |
 | `report/metrics_summary.csv`, `report/factor_summary.csv` | Bảng đánh giá 7 khía cạnh; xếp hạng các yếu tố ảnh hưởng |
+| `demo/kkbox_demo.html` | Trang demo sản phẩm tương tác, mở bằng trình duyệt. Dựng lại riêng: `python demo/build_demo.py` |
 | `data/manifest.json` | Kiểm tra dữ liệu: số khách, tỉ lệ rời bỏ, ngày giao dịch muộn nhất (phải trước mốc quan sát) |
 
 ## 6. Chạy thử nhanh không cần dữ liệu thật (~2 phút)

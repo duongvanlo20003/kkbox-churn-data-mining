@@ -34,6 +34,7 @@ STEPS = [
     "mining/13_drift_ablation.py",
     "report/make_diagrams.py",
     "report/build_report.py",
+    "demo/build_demo.py",
 ]
 
 

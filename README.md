@@ -4,7 +4,18 @@ Final project môn Data Mining (DAM501): áp dụng quy trình Knowledge Discove
 
 > Nhánh `Khanh`: phiên bản 2 của pipeline. Phiên bản 1 (nhánh `main`) dùng dữ liệu của chính tháng nhãn nên bị rò rỉ thông tin (AUC 0,977, luật confidence 97–99%). Phiên bản này cắt mọi đặc trưng tại một mốc quan sát, đánh giá ngoài thời gian và đo lại mức rò rỉ (xem `report/leakage_audit.csv`).
 
-**Tài liệu:** [Hướng dẫn chạy code từng bước](HUONG_DAN_CHAY.md) · [Những gì đã thay đổi so với bản cũ](THAY_DOI.md) · [Đánh giá phương pháp và tổng hợp cải tiến](DANH_GIA_PHUONG_PHAP.md) · [Báo cáo](report/report.docx) · Slide thuyết trình: https://claude.ai/artifact/WLTuVPaYLubUEq5Q6mXBCt (16 trang, có ghi chú lời nói; tải về PowerPoint/PDF từ trang đó)
+**Tài liệu:** [Hướng dẫn chạy code từng bước](HUONG_DAN_CHAY.md) · [Những gì đã thay đổi so với bản cũ](THAY_DOI.md) · [Đánh giá phương pháp và tổng hợp cải tiến](DANH_GIA_PHUONG_PHAP.md) · [Báo cáo](report/report.docx) · Slide thuyết trình: https://claude.ai/artifact/WLTuVPaYLubUEq5Q6mXBCt (23 trang, chia 5 phần cho 5 người, có ghi chú lời nói; tải về PowerPoint/PDF từ trang đó) · [Demo sản phẩm](demo/kkbox_demo.html) (mở file bằng trình duyệt; bản online: https://claude.ai/artifact/VLWH3uAiTJDyYZUkoFosP2)
+
+## Demo sản phẩm
+
+`demo/kkbox_demo.html` là sản phẩm đầu ra dạng trang web tương tác, dành cho bộ phận chăm sóc khách hàng. Tải file về và mở bằng trình duyệt, không cần cài gì. Trang gồm:
+
+1. **Kiểm tra một khách:** chọn đặc điểm của khách → mức rủi ro bỏ đi, quy tắc khớp, nhóm khách, gợi ý hành động.
+2. **Lịch sử mua gói:** nhập các lần giao dịch → đối chiếu với 30 mẫu tuần tự đã kiểm định.
+3. **8 nhóm khách**, 4. **Bộ quy tắc** (25 rủi ro, 9 an toàn), 5. **Nên gọi bao nhiêu khách** (đường lãi lỗ).
+6. **Mô tả sản phẩm:** người dùng, thành phần, đầu vào/đầu ra, quy trình hằng tháng, chất lượng, giới hạn.
+
+Mọi số liệu được lấy từ `report/` bằng `python demo/build_demo.py` (bước cuối của `run_all.py`). Ô kiểm tra một khách chỉ dùng bộ quy tắc, chưa chạy mô hình LightGBM trên trình duyệt.
 
 ## Kết quả chính
 
@@ -80,6 +91,7 @@ data_prep/     tải dữ liệu, đặc trưng theo cohort, chuỗi giao dịch
 analysis/      EDA
 mining/        clustering, rules, classification, bonus, sequential, validation
 report/        kết quả (csv, metrics, figures), report.docx, bộ dựng báo cáo
+demo/          trang demo sản phẩm (template.html + build_demo.py → kkbox_demo.html)
 tests/         sinh dữ liệu giả cùng schema để kiểm thử
 ```
 
