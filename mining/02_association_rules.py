@@ -10,6 +10,9 @@ Design choices (and why):
   by at least MIN_IMPROVE in confidence (churn rules) or is lower by that much (protective).
 * Every reported rule is re-measured on a 30 % holdout split never used for mining.
 * Sensitivity: rule counts and top-10 stability across min_support values.
+* RULE_EXCLUDE (env, comma-separated item prefixes such as "segment=,gender=") drops those items
+  before mining; mining/14_method_checks.py uses it to check that the segment and gender items do
+  not change the main rules.
 
 Outputs: report/churn_rules.csv, retention_rules.csv, rule_sensitivity.csv, metrics/rules.json,
 figures/rules_scatter.png
@@ -45,6 +48,9 @@ tr, ho = train_test_split(df, test_size=0.3, stratify=df.is_churn, random_state=
 
 
 Itr, Iho = itemise(tr, tr), itemise(ho, tr)
+EXCLUDE = tuple(x for x in os.environ.get("RULE_EXCLUDE", "").split(",") if x)
+if EXCLUDE:
+    Itr = Itr[[c for c in Itr.columns if not c.startswith(EXCLUDE)]]
 Iho = Iho.reindex(columns=Itr.columns, fill_value=False)
 ytr, yho = tr.is_churn.values, ho.is_churn.values
 base = ytr.mean()

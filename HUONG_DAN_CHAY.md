@@ -52,6 +52,7 @@ Chương trình chạy lần lượt 19 bước dưới đây và dừng ngay n�
 | 2 | `data_prep/02_build_sequences.py` | Tạo chuỗi giao dịch | < 1 phút |
 | 3 | `data_prep/03_build_leakage_audit.py` | Dữ liệu để đo rò rỉ | < 1 phút |
 | 4 | `analysis/01_eda.py` | Phân tích khám phá, hình | ~1 phút |
+| 4b | `analysis/02_eda_stratified.py` | Bảng chéo kênh × tự gia hạn, mức nghe × tự gia hạn; giới tính thiếu theo kênh; Hình 3 bản mới | < 1 phút |
 | 5 | `mining/01_clustering.py` | Phân cụm K-Means, so sánh thuật toán | ~1 phút |
 | 6 | `mining/02_association_rules.py` | Luật kết hợp FP-Growth | ~1 phút |
 | 7 | `mining/03_classification.py` | Huấn luyện và đánh giá 5 mô hình | ~12 phút |
@@ -65,6 +66,8 @@ Chương trình chạy lần lượt 19 bước dưới đây và dừng ngay n�
 | 15 | `mining/11_clustering_variants.py` | So sánh 4 cách chọn đặc trưng cho phân cụm | ~5 phút |
 | 16 | `mining/12_ordering_sensitivity.py` | Độ nhạy của thứ tự giao dịch cùng ngày | < 1 phút |
 | 17 | `mining/13_drift_ablation.py` | Bỏ đặc trưng lệch theo lịch, đo lại | ~3 phút |
+| 17b | `mining/14_method_checks.py` | Luật khi bỏ item phân khúc/giới tính; chuỗi trả tự động → trả tay; Isolation Forest (độ trùng, contamination 1/2/5%); Hình 7 có đường SSE | ~3 phút |
+| 17c | `mining/15_eval_checks.py` | Kiểm tra luật trên khách chỉ có ở tháng 2; độ ổn định của lời giải k = 3 | ~2 phút |
 | 18 | `report/make_diagrams.py` | Vẽ sơ đồ quy trình, trục thời gian | vài giây |
 | 19 | `report/build_report.py` | Dựng `report/report.docx` | vài giây |
 

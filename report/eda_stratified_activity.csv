@@ -1,0 +1,5 @@
+activity,churn_rate_off,churn_rate_on,n_off,n_on,churn_all
+active=low,0.5041,0.0459,20252,166123,0.0962
+active=mid,0.3901,0.0422,27127,154833,0.0941
+active=high,0.35,0.0377,30692,148622,0.0912
+no_logs,0.9206,0.0561,1738,128467,0.0738

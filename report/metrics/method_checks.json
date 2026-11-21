@@ -1,0 +1,81 @@
+{
+  "rules_without_segment_gender": {
+    "n_rules": 25,
+    "main_rules_without_these_items": 16,
+    "of_which_found_again": 16,
+    "max_abs_confidence_change": 0.0,
+    "new_rules": 9,
+    "new_rules_lift_range": [
+      1.9187262891940609,
+      2.533438547191869
+    ],
+    "top_rule": {
+      "rule": "plan>30d",
+      "confidence": 0.8288170767862437,
+      "lift": 9.215026095000242
+    }
+  },
+  "sequence_auto_to_manual": {
+    "train": {
+      "support": 0.02242857142857143,
+      "confidence": 0.310828025477707,
+      "lift": 3.4558389109656114
+    },
+    "holdout": {
+      "support": 0.02251111111111111,
+      "confidence": 0.30157946692991117,
+      "lift": 3.3529526897704764
+    },
+    "feb": {
+      "support": 0.022343333333333333,
+      "confidence": 0.2319856780546024,
+      "lift": 3.6291236072576902
+    }
+  },
+  "isolation_forest": [
+    {
+      "contamination": 0.01,
+      "n": 9710,
+      "churn_rate": 0.716,
+      "lift": 7.9603,
+      "share_churners_covered": 0.0796,
+      "share_long_plan": 0.4799,
+      "share_segment_3": 0.4217,
+      "n_not_long_plan": 5050,
+      "churn_not_long_plan": 0.5651
+    },
+    {
+      "contamination": 0.02,
+      "n": 19420,
+      "churn_rate": 0.7117,
+      "lift": 7.9128,
+      "share_churners_covered": 0.1583,
+      "share_long_plan": 0.5719,
+      "share_segment_3": 0.5332,
+      "n_not_long_plan": 8313,
+      "churn_not_long_plan": 0.5035
+    },
+    {
+      "contamination": 0.05,
+      "n": 48548,
+      "churn_rate": 0.5607,
+      "lift": 6.2336,
+      "share_churners_covered": 0.3117,
+      "share_long_plan": 0.4472,
+      "share_segment_3": 0.4143,
+      "n_not_long_plan": 26839,
+      "churn_not_long_plan": 0.331
+    }
+  ],
+  "sse_decrease_pct": {
+    "2": NaN,
+    "3": 13.8,
+    "4": 10.5,
+    "5": 9.2,
+    "6": 8.1,
+    "7": 7.8,
+    "8": 6.8,
+    "9": 4.1,
+    "10": 6.8
+  }
+}

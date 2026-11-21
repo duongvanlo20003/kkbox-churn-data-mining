@@ -1,0 +1,14 @@
+{
+  "feb_only": {
+    "n_users": 111230,
+    "churn_rate": 0.4238964308190236,
+    "rules_checked": 34,
+    "rules_same_direction": 34,
+    "log_lift_pearson": 0.88630939073295
+  },
+  "k_macro_feb_refit_ari": {
+    "k": 3,
+    "ari": 0.9097082803559026
+  },
+  "k_chosen_feb_refit_ari_from_07": "see metrics/stability.json: ari_feb_refit_vs_mar_model"
+}

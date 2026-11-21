@@ -51,6 +51,7 @@ Kết luận: churn ở KKBox là **quyết định thanh toán** (tự gia hạ
 | Kỹ thuật | File | Vai trò |
 |---|---|---|
 | EDA (Wilson CI, χ²/Cramér's V, Mann–Whitney) | `analysis/01_eda.py` | mô tả, chọn kỹ thuật |
+| EDA phân tầng (confounding, interaction theo tự gia hạn) | `analysis/02_eda_stratified.py` | mô tả |
 | K-Means + Ward/GMM/HDBSCAN, bootstrap ARI | `mining/01_clustering.py` | phân khúc (unsupervised) |
 | FP-Growth, productive rules, holdout | `mining/02_association_rules.py` | tổ hợp đặc điểm → churn |
 | Logistic/Tree/RF/LightGBM, SHAP, ablation | `mining/03_classification.py` | bổ trợ, xếp hạng rủi ro |
@@ -62,6 +63,8 @@ Kết luận: churn ở KKBox là **quyết định thanh toán** (tự gia hạ
 | Độ ổn định theo thời gian (tháng 3 → tháng 2) | `mining/07_stability.py` | đánh giá |
 | Hiệu chỉnh xác suất (EM), đường lợi nhuận | `mining/08_business_value.py` | đánh giá, kinh doanh |
 | Thí nghiệm 2×2: đặc trưng thanh toán, Optuna | `mining/09_model_improvement.py` | cải tiến mô hình |
+| Kiểm tra thêm cho phương pháp: luật không có item phân khúc, chuỗi tự động → thủ công, Isolation Forest theo contamination, đường SSE | `mining/14_method_checks.py` | đánh giá |
+| Kiểm tra trên khách độc lập (chỉ có ở tháng 2), ổn định của k = 3 | `mining/15_eval_checks.py` | đánh giá |
 
 ## Cách chạy
 

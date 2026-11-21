@@ -1,0 +1,77 @@
+{
+  "split": "train 70% of mar (same as association rules)",
+  "via_x_renew": {
+    "3.0": {
+      "churn_rate_off": 0.3761,
+      "churn_rate_on": 0.0619,
+      "n_off": 25814,
+      "n_on": 48485,
+      "churn_all": 0.1726
+    },
+    "4.0": {
+      "churn_rate_off": 0.382,
+      "churn_rate_on": 0.0792,
+      "n_off": 17760,
+      "n_on": 18605,
+      "churn_all": 0.2318
+    },
+    "7.0": {
+      "churn_rate_off": 0.6169,
+      "churn_rate_on": 0.0383,
+      "n_off": 3482,
+      "n_on": 320364,
+      "churn_all": 0.0445
+    },
+    "9.0": {
+      "churn_rate_off": 0.4388,
+      "churn_rate_on": 0.0477,
+      "n_off": 32525,
+      "n_on": 132113,
+      "churn_all": 0.1269
+    },
+    "13.0": {
+      "churn_rate_off": 0.6,
+      "churn_rate_on": 0.0891,
+      "n_off": 5,
+      "n_on": 2279,
+      "churn_all": 0.0962
+    }
+  },
+  "activity_x_renew": {
+    "active=low": {
+      "churn_rate_off": 0.5041,
+      "churn_rate_on": 0.0459,
+      "n_off": 20252,
+      "n_on": 166123,
+      "churn_all": 0.0962
+    },
+    "active=mid": {
+      "churn_rate_off": 0.3901,
+      "churn_rate_on": 0.0422,
+      "n_off": 27127,
+      "n_on": 154833,
+      "churn_all": 0.0941
+    },
+    "active=high": {
+      "churn_rate_off": 0.35,
+      "churn_rate_on": 0.0377,
+      "n_off": 30692,
+      "n_on": 148622,
+      "churn_all": 0.0912
+    },
+    "no_logs": {
+      "churn_rate_off": 0.9206,
+      "churn_rate_on": 0.0561,
+      "n_off": 1738,
+      "n_on": 128467,
+      "churn_all": 0.0738
+    }
+  },
+  "gender_unknown_by_via": {
+    "3.0": 0.1666,
+    "4.0": 0.4798,
+    "7.0": 0.8431,
+    "9.0": 0.1521,
+    "13.0": 0.9157
+  }
+}

@@ -34,6 +34,9 @@ Nhánh `Khanh` sửa và bổ sung khoảng 3.500 dòng code trên 27 file. Bả
 | `mining/11_clustering_variants.py` | – | **Mới**: so sánh 4 cách chọn đặc trưng cho phân cụm |
 | `mining/12_ordering_sensitivity.py` | – | **Mới** (Codex viết): độ nhạy của thứ tự giao dịch cùng ngày |
 | `mining/13_drift_ablation.py` | – | **Mới**: bỏ đặc trưng lệch theo lịch để kiểm chứng nguyên nhân AUC giảm |
+| `analysis/02_eda_stratified.py` | – | **Mới**: bảng chéo phân tầng theo tự gia hạn, giới tính thiếu theo kênh, Hình 3 bản mới (chỉ khách có log, bin rộng 1) |
+| `mining/14_method_checks.py` | – | **Mới**: luật khi bỏ item phân khúc/giới tính, chuỗi tự động → thủ công, Isolation Forest theo contamination, hình chọn k có đường SSE |
+| `mining/15_eval_checks.py` | – | **Mới**: luật trên khách chỉ có ở tháng 2, ổn định của lời giải k = 3 |
 | `mining/common.py`, `mining/transforms.py` | Đọc dữ liệu, điền giá trị thiếu trước khi chia (gây rò rỉ nhẹ) | Không điền trước khi chia; hàm dùng chung cho các bước |
 | `report/build_report.py` | Số liệu và tên nhóm ghi tay | Lấy số từ kết quả; viết lại lời văn dễ hiểu; tự đánh số bảng/hình; dịch luật và chuỗi sang tiếng Việt (`vi_labels.py`) |
 | `report/make_diagrams.py` | – | **Mới**: sơ đồ quy trình và trục thời gian |
